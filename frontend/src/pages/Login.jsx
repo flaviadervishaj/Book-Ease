@@ -24,14 +24,26 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    
+    // Basic validation
+    if (!email.trim()) {
+      setError('Please enter your email address')
+      return
+    }
+    
+    if (!password) {
+      setError('Please enter your password')
+      return
+    }
+    
     setLoading(true)
 
-    const result = await login(email, password)
+    const result = await login(email.trim(), password)
     
     if (result.success) {
       navigate('/services')
     } else {
-      setError(result.error)
+      setError(result.error || 'Invalid email or password. Please try again.')
     }
     
     setLoading(false)

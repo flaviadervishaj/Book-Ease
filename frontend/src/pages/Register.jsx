@@ -26,6 +26,17 @@ const Register = () => {
     e.preventDefault()
     setError('')
 
+    // Basic validation
+    if (!email.trim()) {
+      setError('Please enter your email address')
+      return
+    }
+
+    if (!password) {
+      setError('Please enter a password')
+      return
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match')
       return
@@ -38,12 +49,12 @@ const Register = () => {
 
     setLoading(true)
 
-    const result = await register(email, password, 'client')
+    const result = await register(email.trim(), password, 'client')
     
     if (result.success) {
       navigate('/services')
     } else {
-      setError(result.error)
+      setError(result.error || 'Registration failed. Please try again.')
     }
     
     setLoading(false)

@@ -44,9 +44,30 @@ export const AuthProvider = ({ children }) => {
       setUser(user)
       return { success: true }
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.error || 'Login failed'
+      console.error('Login error:', error)
+      
+      // Handle different error scenarios
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.error || 
+                           error.response.data?.message ||
+                           `Login failed: ${error.response.status} ${error.response.statusText}`
+        return {
+          success: false,
+          error: errorMessage
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        return {
+          success: false,
+          error: 'Unable to connect to server. Please check your internet connection.'
+        }
+      } else {
+        // Something else happened
+        return {
+          success: false,
+          error: error.message || 'An unexpected error occurred. Please try again.'
+        }
       }
     }
   }
@@ -63,9 +84,30 @@ export const AuthProvider = ({ children }) => {
       setUser(user)
       return { success: true }
     } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.error || 'Registration failed'
+      console.error('Registration error:', error)
+      
+      // Handle different error scenarios
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.error || 
+                           error.response.data?.message ||
+                           `Registration failed: ${error.response.status} ${error.response.statusText}`
+        return {
+          success: false,
+          error: errorMessage
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        return {
+          success: false,
+          error: 'Unable to connect to server. Please check your internet connection.'
+        }
+      } else {
+        // Something else happened
+        return {
+          success: false,
+          error: error.message || 'An unexpected error occurred. Please try again.'
+        }
       }
     }
   }
