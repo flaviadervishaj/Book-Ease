@@ -95,14 +95,17 @@ const Book = () => {
     setShowConfirm(false)
 
     try {
-      await api.post('/appointments', {
-        service_id: selectedService,
+      const response = await api.post('/appointments', {
+        service_id: parseInt(selectedService),
         start_time: selectedSlot.datetime
       })
-      toast.success('Appointment booked successfully!')
-      navigate('/my-appointments')
+      
+      if (response.data) {
+        toast.success('Appointment booked successfully!')
+        navigate('/my-appointments')
+      }
     } catch (error) {
-      const errorMsg = error.response?.data?.error || 'Failed to book appointment'
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to book appointment'
       setError(errorMsg)
       toast.error(errorMsg)
       setLoading(false)

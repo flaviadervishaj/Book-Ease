@@ -25,10 +25,6 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(health_bp, url_prefix='/api')
     
-    @app.route('/api/health', methods=['GET'])
-    def health_check():
-        return jsonify({'status': 'ok', 'message': 'BookEase API is running'}), 200
-    
     with app.app_context():
         try:
             db.create_all()

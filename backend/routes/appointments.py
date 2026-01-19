@@ -81,24 +81,31 @@ def create_appointment():
         
         # Parse start time
         try:
-            start_time_str = data['start_time']
+            start_time_str = str(data['start_time']).strip()
+            
             # Handle different datetime formats
             if 'Z' in start_time_str:
-                # ISO format with Z (UTC)
+                # ISO format with Z (UTC) - convert to +00:00
                 start_time_str = start_time_str.replace('Z', '+00:00')
             
             # Try parsing with timezone first
             try:
                 start_time = datetime.fromisoformat(start_time_str)
             except ValueError:
-                # Try parsing without timezone
-                start_time = datetime.strptime(start_time_str.split('+')[0].split('Z')[0], '%Y-%m-%dT%H:%M:%S')
+                # Try parsing without timezone (remove timezone part)
+                clean_str = start_time_str.split('+')[0].split('Z')[0].split('.')[0]
+                try:
+                    start_time = datetime.strptime(clean_str, '%Y-%m-%dT%H:%M:%S')
+                except ValueError:
+                    # Try with milliseconds
+                    start_time = datetime.strptime(clean_str, '%Y-%m-%dT%H:%M:%S.%f')
             
-            # Convert to naive datetime (remove timezone info)
+            # Convert to naive datetime (remove timezone info) for database storage
             if start_time.tzinfo:
-                start_time = start_time.replace(tzinfo=None)
-        except (ValueError, AttributeError, KeyError) as e:
-            return jsonify({'error': f'Invalid start_time format: {str(e)}. Use ISO 8601 format'}), 400
+                # Convert to UTC first, then remove timezone
+                start_time = start_time.astimezone(timezone.utc).replace(tzinfo=None)
+        except (ValueError, AttributeError, KeyError, TypeError) as e:
+            return jsonify({'error': f'Invalid start_time format: {str(e)}. Expected ISO 8601 format (e.g., 2024-01-20T14:30:00Z)'}), 400
         
         # Calculate end time
         end_time = start_time + timedelta(minutes=service.duration_minutes)

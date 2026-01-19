@@ -24,7 +24,6 @@ export const AuthProvider = ({ children }) => {
         setUser(JSON.parse(userData))
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`
       } catch (error) {
-        console.error('Error parsing user data:', error)
         localStorage.removeItem('token')
         localStorage.removeItem('user')
       }
@@ -44,8 +43,6 @@ export const AuthProvider = ({ children }) => {
       setUser(user)
       return { success: true }
     } catch (error) {
-      console.error('Login error:', error)
-      
       if (error.response) {
         const errorMessage = error.response.data?.error || 
                            error.response.data?.message ||
@@ -80,8 +77,6 @@ export const AuthProvider = ({ children }) => {
       setUser(user)
       return { success: true }
     } catch (error) {
-      console.error('Registration error:', error)
-      
       if (error.response) {
         const errorMessage = error.response.data?.error || 
                            error.response.data?.message ||
