@@ -229,46 +229,50 @@
 
 @media (max-width: 768px) {
   .navbar {
-    padding: var(--spacing-sm) 0;
+    padding: var(--spacing-xs) 0;
   }
 
   .nav-content {
-    flex-wrap: wrap;
-    gap: var(--spacing-md);
+    flex-wrap: nowrap;
+    gap: var(--spacing-sm);
+    align-items: center;
   }
 
   .logo {
     order: 1;
-    flex: 1;
+    flex: 0 0 auto;
     min-width: 0;
   }
 
   .logo-text {
-    font-size: 22px;
+    font-size: 20px;
     letter-spacing: 0.5px;
   }
 
   .nav-actions {
     order: 2;
-    flex-wrap: wrap;
-    gap: var(--spacing-sm);
+    flex: 0 0 auto;
+    gap: var(--spacing-xs);
+    margin-left: auto;
   }
 
   .theme-toggle {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
   }
 
   .theme-toggle svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
   }
 
   .user-info {
     flex-direction: row;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-xs) var(--spacing-sm);
-    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-xs);
+    flex-wrap: nowrap;
+    border-radius: var(--radius-md);
   }
 
   .user-email {
@@ -276,56 +280,117 @@
   }
 
   .user-role {
-    font-size: 10px;
-    padding: 3px 10px;
+    font-size: 9px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  .user-info .btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   .nav-links {
     order: 3;
     width: 100%;
-    justify-content: flex-start;
-    margin-top: var(--spacing-sm);
-    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-top: var(--spacing-xs);
+    flex-wrap: nowrap;
     gap: var(--spacing-xs);
-    padding-top: var(--spacing-sm);
+    padding-top: var(--spacing-xs);
     border-top: 1px solid var(--border-color);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
   }
 
   .nav-links a {
-    padding: 8px 12px;
-    font-size: 13px;
-    flex: 1;
-    min-width: calc(50% - var(--spacing-xs));
+    padding: 6px 10px;
+    font-size: 12px;
+    flex: 0 0 auto;
+    min-width: auto;
     text-align: center;
+    white-space: nowrap;
   }
 
   .main-content {
-    padding: var(--spacing-lg) 0;
+    padding: var(--spacing-md) 0;
   }
 
   .container {
-    padding: 0 var(--spacing-md);
+    padding: 0 var(--spacing-sm);
   }
 }
 
 @media (max-width: 480px) {
-  .logo-text {
-    font-size: 20px;
+  .navbar {
+    padding: var(--spacing-xs) 0;
   }
 
-  .nav-links a {
-    font-size: 12px;
-    padding: 7px 10px;
-    min-width: 100%;
+  .logo-text {
+    font-size: 18px;
+  }
+
+  .nav-content {
+    gap: var(--spacing-xs);
+  }
+
+  .nav-actions {
+    gap: 4px;
+  }
+
+  .theme-toggle {
+    width: 28px;
+    height: 28px;
+  }
+
+  .theme-toggle svg {
+    width: 14px;
+    height: 14px;
   }
 
   .user-info {
-    width: 100%;
-    justify-content: center;
+    padding: 2px 6px;
+    gap: 4px;
+  }
+
+  .user-role {
+    font-size: 8px;
+    padding: 2px 6px;
+  }
+
+  .user-info .btn {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  .nav-links {
+    gap: 4px;
+    padding-top: 6px;
+    margin-top: 6px;
+  }
+
+  .nav-links a {
+    font-size: 11px;
+    padding: 5px 8px;
+    min-width: auto;
+  }
+
+  .main-content {
+    padding: var(--spacing-sm) 0;
+  }
+
+  .container {
+    padding: 0 var(--spacing-xs);
   }
 
   .btn {
-    padding: 8px 16px;
-    font-size: 13px;
+    padding: 8px 14px;
+    font-size: 12px;
   }
 }
