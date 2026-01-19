@@ -41,7 +41,6 @@ const AdminDashboard = () => {
       setLoading(false)
       setRefreshing(false)
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
       setLoading(false)
       setRefreshing(false)
     }

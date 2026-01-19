@@ -39,7 +39,6 @@ const AdminServices = () => {
       setServices(response.data.services)
       setLoading(false)
     } catch (error) {
-      console.error('Error fetching services:', error)
       toast.error('Failed to load services')
       setLoading(false)
     }

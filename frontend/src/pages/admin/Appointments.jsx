@@ -38,7 +38,6 @@ const AdminAppointments = () => {
       setAppointments(response.data.appointments)
       setLoading(false)
     } catch (error) {
-      console.error('Error fetching appointments:', error)
       toast.error('Failed to load appointments')
       setLoading(false)
     }

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Appointment, Service
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from utils.booking_logic import get_available_slots, is_slot_available, get_existing_appointments
 
 appointments_bp = Blueprint('appointments', __name__)
@@ -98,7 +98,10 @@ def create_appointment():
                     start_time = datetime.strptime(clean_str, '%Y-%m-%dT%H:%M:%S')
                 except ValueError:
                     # Try with milliseconds
-                    start_time = datetime.strptime(clean_str, '%Y-%m-%dT%H:%M:%S.%f')
+                    try:
+                        start_time = datetime.strptime(clean_str, '%Y-%m-%dT%H:%M:%S.%f')
+                    except ValueError:
+                        return jsonify({'error': f'Invalid start_time format: {clean_str}. Expected ISO 8601 format'}), 400
             
             # Convert to naive datetime (remove timezone info) for database storage
             if start_time.tzinfo:

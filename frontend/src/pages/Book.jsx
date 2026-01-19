@@ -54,7 +54,6 @@ const Book = () => {
       }
       setLoadingServices(false)
     } catch (error) {
-      console.error('Error fetching services:', error)
       toast.error('Failed to load services')
       setLoadingServices(false)
     }
@@ -74,7 +73,6 @@ const Book = () => {
       })
       setAvailableSlots(response.data.available_slots || [])
     } catch (error) {
-      console.error('Error fetching available slots:', error)
       toast.error('Failed to load available time slots')
       setAvailableSlots([])
     } finally {
@@ -84,7 +82,6 @@ const Book = () => {
 
   const handleSlotSelect = (slot) => {
     setSelectedSlot(slot)
-    setShowConfirm(true)
   }
 
   const handleConfirmBooking = async () => {
@@ -307,7 +304,7 @@ const Book = () => {
                 className="btn btn-primary"
                 style={{ width: '100%', marginTop: '16px' }}
               >
-                {loading ? 'Booking...' : 'Confirm Booking'}
+                Book Now
               </button>
             )}
           </div>

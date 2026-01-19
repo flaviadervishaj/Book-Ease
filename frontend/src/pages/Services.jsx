@@ -32,7 +32,6 @@ const Services = () => {
       }
       setLoading(false)
     } catch (error) {
-      console.error('Error fetching services:', error)
       setLoading(false)
     }
   }

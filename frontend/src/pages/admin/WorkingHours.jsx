@@ -44,7 +44,6 @@ const WorkingHours = () => {
       setWorkingHours(allDays)
       setLoading(false)
     } catch (error) {
-      console.error('Error fetching working hours:', error)
       toast.error('Failed to load working hours')
       setLoading(false)
     }

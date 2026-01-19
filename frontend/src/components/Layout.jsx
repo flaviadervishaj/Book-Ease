@@ -84,6 +84,16 @@ const Layout = () => {
             </div>
             
             <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+              <div className="mobile-menu-header">
+                <Logo />
+                <button
+                  className="mobile-menu-close"
+                  onClick={closeMobileMenu}
+                  aria-label="Close menu"
+                >
+                  <CloseIcon />
+                </button>
+              </div>
               <div className="mobile-menu-content">
                 <Link
                   to="/services"
