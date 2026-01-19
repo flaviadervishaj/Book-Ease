@@ -85,7 +85,7 @@ Ky udhëzues do të të çojë hap pas hapi për deploy në Render free plan me 
    - **Branch:** `main`
    - **Root Directory:** `frontend`
    - **Build Command:** `npm install && npm run build`
-   - **Publish Directory:** `frontend/dist`
+   - **Publish Directory:** `dist` ⚠️ **IMPORTANTE:** Jo `frontend/dist`, vetëm `dist` (sepse Root Directory është tashmë `frontend`)
 4. Kliko **"Advanced"** dhe shto Environment Variable:
    - **VITE_API_URL:** `https://bookease-backend.onrender.com` (URL e backend që krijove)
 5. Kliko **"Create Static Site"**
@@ -108,18 +108,44 @@ Ky udhëzues do të të çojë hap pas hapi për deploy në Render free plan me 
 
 ## Hapi 6: Seed Database (Krijo Tabelat dhe Të Dhëna Demo)
 
-1. Shko te **Backend Service** → **"Shell"** (në sidebar)
-2. Nëse nuk shfaqet Shell, kliko **"Events"** dhe prit që deploy të përfundojë
-3. Në Shell, ekzekuto:
+**Metoda 1: Auto-Seed (Automatik) - Rekomanduar**
+
+Backend do të seed-ojë automatikisht kur start-on nëse database është bosh. Thjesht prit që backend të restart-ohet pas deploy dhe kontrollo logs për mesazhin "Database seeded successfully!".
+
+**Metoda 2: Manual Seed (Nëse auto-seed nuk funksionon)**
+
+1. Pas deploy të backend, hap URL-n në browser:
+   ```
+   https://bookease-backend.onrender.com/api/admin/seed
+   ```
+2. Ose përdor curl/Postman për të bërë POST request:
+   ```bash
+   curl -X POST https://bookease-backend.onrender.com/api/admin/seed
+   ```
+3. Do të marrësh përgjigje si:
+   ```json
+   {
+     "message": "Database seeded successfully!",
+     "users": 2,
+     "services": 12
+   }
+   ```
+4. Nëse database tashmë ka të dhëna, do të marrësh mesazh që seeding u anashkalua
+
+**Metoda 3: Render Shell (Nëse ke plan paid)**
+
+Nëse ke plan paid dhe Shell është i disponueshëm:
+1. Shko te **Backend Service** → **"Shell"**
+2. Ekzekuto:
    ```bash
    cd backend
    python seed.py
    ```
-4. Do të shohësh mesazhe si:
-   - "Created admin user: admin@bookease.com / admin123"
-   - "Created demo client..."
-   - "Created services..."
-5. Nëse shfaqet error për database connection, kontrollo që `DATABASE_URL` është e saktë në Environment Variables
+
+**Pas Seed:**
+- Admin: `admin@bookease.com` / `admin123`
+- Client: `client@example.com` / `client123`
+- 12 services do të jenë të disponueshme
 
 ---
 
