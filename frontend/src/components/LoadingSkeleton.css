@@ -1,0 +1,159 @@
+.skeleton-table,
+.skeleton-cards,
+.skeleton-form {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton-table {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.skeleton-header {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.skeleton-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.skeleton-cell {
+  flex: 1;
+  height: 20px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 0%,
+    var(--border-color) 50%,
+    var(--bg-tertiary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-header-cell {
+  height: 16px;
+  background-color: var(--bg-tertiary);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.skeleton-card {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border-color);
+}
+
+.skeleton-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background-color: var(--bg-tertiary);
+}
+
+.skeleton-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-line {
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 0%,
+    var(--border-color) 50%,
+    var(--bg-tertiary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-title {
+  width: 60%;
+  height: 20px;
+}
+
+.skeleton-subtitle {
+  width: 40%;
+  height: 14px;
+}
+
+.skeleton-title-large {
+  width: 200px;
+  height: 32px;
+  margin-bottom: 24px;
+}
+
+.skeleton-label {
+  width: 100px;
+  height: 14px;
+  margin-bottom: 8px;
+}
+
+.skeleton-input,
+.skeleton-textarea {
+  width: 100%;
+  height: 40px;
+  background-color: var(--bg-tertiary);
+  border-radius: 6px;
+}
+
+.skeleton-textarea {
+  height: 120px;
+}
+
+.skeleton-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.skeleton-input-group {
+  margin-bottom: 20px;
+}
+
+.skeleton-form {
+  background-color: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 32px;
+  border: 1px solid var(--border-color);
+}
+

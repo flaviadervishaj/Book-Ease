@@ -1,0 +1,39 @@
+.service-icon-svg,
+.icon-search,
+.icon-clock,
+.icon-money,
+.icon-stats,
+.icon-calendar,
+.icon-location,
+.icon-check,
+.icon-x,
+.icon-copy,
+.icon-refresh,
+.icon-document,
+.icon-sun,
+.icon-moon {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  color: inherit;
+}
+
+.service-icon-svg svg,
+.icon-search svg,
+.icon-clock svg,
+.icon-money svg,
+.icon-stats svg,
+.icon-calendar svg,
+.icon-location svg,
+.icon-check svg,
+.icon-x svg,
+.icon-copy svg,
+.icon-refresh svg,
+.icon-document svg,
+.icon-sun svg,
+.icon-moon svg {
+  width: 100%;
+  height: 100%;
+}
+
