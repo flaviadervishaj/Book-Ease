@@ -160,6 +160,54 @@ VITE_API_URL=https://your-backend-url.com
 
 ---
 
+## Si të Shmangësh Cold Starts në Render Free Plan
+
+Render free plan ka **cold starts** (aplikacioni "fjet" pas 15 min pa aktivitet). Por mund ta mbash të zgjuar me **keep-alive ping**:
+
+### Metoda 1: Cron Job External (Rekomanduar)
+
+1. **Krijo account në cron-job.org** (falas):
+   - Shko në https://cron-job.org
+   - Regjistrohu (falas)
+
+2. **Krijo cron job:**
+   - URL: `https://bookease-backend.onrender.com/api/ping`
+   - Schedule: **Çdo 10 minuta** (`*/10 * * * *`)
+   - Method: GET
+   - Kliko "Create Cronjob"
+
+3. **Rezultati:**
+   - Backend do të marrë ping çdo 10 minuta
+   - Nuk do të pushojë në sleep mode
+   - **Limit:** Render free plan ka 750 orë/muaj (mjafton për 24/7)
+
+### Metoda 2: UptimeRobot (Alternativë)
+
+1. Shko në https://uptimerobot.com
+2. Krijo account falas
+3. Add Monitor → HTTP(s)
+4. URL: `https://bookease-backend.onrender.com/api/ping`
+5. Interval: 5 minuta
+6. Kliko "Create Monitor"
+
+### Opsione të Tjera pa Cold Starts
+
+**Railway.app:**
+- Ka plan free me $5 credit/muaj
+- Nuk ka sleep mode
+- Më e shtrenjtë pasi të mbarojë krediti
+
+**Fly.io:**
+- Plan free me kufizime
+- Nuk ka sleep mode
+- Më kompleks për setup
+
+**Replit:**
+- Plan free por ka kufizime
+- Nuk ka sleep mode nëse e mbash të hapur
+
+---
+
 ## Tips për Production
 
 1. **Security:**
@@ -169,7 +217,8 @@ VITE_API_URL=https://your-backend-url.com
 
 2. **Performance:**
    - Plan free në Render ka cold starts (aplikacioni "fjet" pas 15 min pa aktivitet)
-   - Për production real, konsidero plan paid
+   - **Zgjidhje:** Përdor cron-job.org për keep-alive ping
+   - Për production real pa cold starts, konsidero plan paid ($7/muaj Starter plan)
 
 3. **Monitoring:**
    - Render ka built-in logs

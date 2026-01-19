@@ -8,6 +8,7 @@ from routes.services import services_bp
 from routes.appointments import appointments_bp
 from routes.availability import availability_bp
 from routes.admin import admin_bp
+from routes.health import health_bp
 
 def create_app():
     """Application factory pattern"""
@@ -25,6 +26,7 @@ def create_app():
     app.register_blueprint(appointments_bp, url_prefix='/api/appointments')
     app.register_blueprint(availability_bp, url_prefix='/api/availability')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(health_bp, url_prefix='/api')
     
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])
