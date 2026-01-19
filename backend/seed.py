@@ -1,12 +1,8 @@
-"""
-Seed script to populate database with demo data
-"""
 from app import create_app
 from models import db, User, Service, WorkingHours
 from datetime import time
 
 def seed_database():
-    """Seed the database with demo data"""
     app = create_app()
     
     with app.app_context():

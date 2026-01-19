@@ -46,9 +46,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Login error:', error)
       
-      // Handle different error scenarios
       if (error.response) {
-        // Server responded with error status
         const errorMessage = error.response.data?.error || 
                            error.response.data?.message ||
                            `Login failed: ${error.response.status} ${error.response.statusText}`
@@ -57,13 +55,11 @@ export const AuthProvider = ({ children }) => {
           error: errorMessage
         }
       } else if (error.request) {
-        // Request was made but no response received
         return {
           success: false,
           error: 'Unable to connect to server. Please check your internet connection.'
         }
       } else {
-        // Something else happened
         return {
           success: false,
           error: error.message || 'An unexpected error occurred. Please try again.'
@@ -86,9 +82,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Registration error:', error)
       
-      // Handle different error scenarios
       if (error.response) {
-        // Server responded with error status
         const errorMessage = error.response.data?.error || 
                            error.response.data?.message ||
                            `Registration failed: ${error.response.status} ${error.response.statusText}`
@@ -97,13 +91,11 @@ export const AuthProvider = ({ children }) => {
           error: errorMessage
         }
       } else if (error.request) {
-        // Request was made but no response received
         return {
           success: false,
           error: 'Unable to connect to server. Please check your internet connection.'
         }
       } else {
-        // Something else happened
         return {
           success: false,
           error: error.message || 'An unexpected error occurred. Please try again.'

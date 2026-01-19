@@ -4,17 +4,19 @@ __pycache__/
 *$py.class
 *.so
 .Python
-venv/
-env/
-ENV/
-.venv
-pip-log.txt
-pip-delete-this-directory.txt
 *.egg-info/
 dist/
 build/
+*.pyc
+*.pyo
 
-# Environment variables
+# Virtual Environments
+venv/
+env/
+ENV/
+.venv/
+
+# Environment Variables
 .env
 .env.local
 .env.*.local
@@ -29,6 +31,11 @@ dist/
 dist-ssr/
 *.local
 
+# Frontend Build
+frontend/dist/
+frontend/.vite/
+frontend/build/
+
 # IDE
 .vscode/
 .idea/
@@ -40,6 +47,7 @@ dist-ssr/
 # Logs
 *.log
 logs/
+*.log.*
 
 # Database
 *.db
@@ -50,14 +58,13 @@ logs/
 .coverage
 .pytest_cache/
 .nyc_output
-
-# Production
-*.pyc
-*.pyo
-
-# Frontend build
-frontend/dist/
-frontend/.vite/
+htmlcov/
 
 # OS
 Thumbs.db
+.DS_Store
+
+# Temporary Files
+*.tmp
+*.temp
+.cache/

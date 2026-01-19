@@ -1,262 +1,181 @@
-# Deploy Guide - BookEase Platform
+# BookEase - Deployment Guide
 
-Ky udhëzues do të të ndihmojë të deploy-osh aplikacionin BookEase në internet. Ka disa opsione, por ne rekomandojmë **Render.com** sepse është e lehtë dhe ka plan free.
+Complete guide for deploying BookEase service booking platform to production.
 
-## Opsionet e Deploy
+## Quick Start - Render.com (Recommended)
 
-### 1. Render.com (Rekomanduar) ⭐
+### Prerequisites
+- GitHub account
+- Render.com account (free)
 
-Render.com është më e lehta dhe më e shpejtë për full-stack aplikacione. Mbështet PostgreSQL dhe mund të deploy-ojë edhe backend edhe frontend.
+### Step 1: Create PostgreSQL Database
 
-#### Hapat për Deploy në Render.com:
+1. Go to https://render.com
+2. Click "New +" → "PostgreSQL"
+3. Configure:
+   - **Name:** `bookease-db`
+   - **Database:** `bookease_db`
+   - **Region:** Choose closest (e.g., Frankfurt for Europe)
+   - **PostgreSQL Version:** 15+
+   - **Plan:** Free
+4. Click "Create Database"
+5. **Save** the connection string (External Database URL)
 
-**A. Krijo llogari në Render.com**
-1. Shko në https://render.com
-2. Regjistrohu me GitHub account tënd
-3. Autorizo Render.com të aksesojë repository-n tënde
+### Step 2: Deploy Backend
 
-**B. Deploy Database (PostgreSQL)**
-1. Në dashboard, kliko "New +" → "PostgreSQL"
-2. Emër: `bookease-db`
-3. Plan: **Free**
-4. Database Name: `bookease_db`
-5. Kliko "Create Database"
-6. **RUAJ** connection string-in që do të shfaqet (do ta përdorësh më vonë)
-
-**C. Deploy Backend**
-1. Në dashboard, kliko "New +" → "Web Service"
-2. Lidh repository-n tënde: `flaviadervishaj/Book-Ease`
-3. Emër: `bookease-backend`
-4. Runtime: **Python 3**
-5. Plan: **Free**
-6. Root Directory: `backend`
-7. Build Command: `pip install -r requirements.txt`
-8. Start Command: `gunicorn app:app --bind 0.0.0.0:$PORT --workers 2`
-9. Environment Variables:
-   - `DATABASE_URL` = (connection string nga database që krijove)
-   - `JWT_SECRET_KEY` = (gjenero një string të rastësishëm, p.sh. `openssl rand -hex 32`)
-   - `CORS_ORIGINS` = `https://bookease-frontend.onrender.com` (do ta ndryshosh pas deploy të frontend)
+1. Click "New +" → "Web Service"
+2. Connect repository: `flaviadervishaj/Book-Ease`
+3. Configure:
+   - **Name:** `bookease-backend`
+   - **Environment:** Python 3
+   - **Region:** Same as database
+   - **Branch:** `main`
+   - **Root Directory:** `backend`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn app:app --bind 0.0.0.0:$PORT --workers 2`
+   - **Plan:** Free
+4. Add Environment Variables:
+   - `DATABASE_URL` = (connection string from database)
+   - `JWT_SECRET_KEY` = (generate random string)
+   - `CORS_ORIGINS` = `https://bookease-frontend.onrender.com` (update after frontend deploy)
    - `FLASK_ENV` = `production`
-10. Kliko "Create Web Service"
+5. Click "Create Web Service"
 
-**D. Deploy Frontend**
-1. Në dashboard, kliko "New +" → "Static Site"
-2. Lidh repository-n tënde: `flaviadervishaj/Book-Ease`
-3. Emër: `bookease-frontend`
-4. Root Directory: `frontend`
-5. Build Command: `npm install && npm run build`
-6. Publish Directory: `frontend/dist`
-7. Environment Variables:
-   - `VITE_API_URL` = (URL e backend service që krijove, p.sh. `https://bookease-backend.onrender.com`)
-8. Kliko "Create Static Site"
+### Step 3: Deploy Frontend
 
-**E. Përditëso CORS në Backend**
-1. Pas deploy të frontend, merr URL-n e frontend (do të jetë diçka si `https://bookease-frontend.onrender.com`)
-2. Shko te backend service → Environment Variables
-3. Përditëso `CORS_ORIGINS` me URL-n e re të frontend
-4. Kliko "Save Changes" dhe prit që të restart-ohet
+1. Click "New +" → "Static Site"
+2. Connect repository: `flaviadervishaj/Book-Ease`
+3. Configure:
+   - **Name:** `bookease-frontend`
+   - **Branch:** `main`
+   - **Root Directory:** `frontend`
+   - **Build Command:** `npm install && npm run build`
+   - **Publish Directory:** `dist`
+4. Add Environment Variable:
+   - `VITE_API_URL` = (backend URL, e.g., `https://bookease-backend.onrender.com`)
+5. Click "Create Static Site"
 
-**F. Seed Database**
-1. Shko te backend service → "Shell"
-2. Ekzekuto:
-   ```bash
-   cd backend
-   python seed.py
-   ```
-3. Kjo do të krijojë tabelat dhe të shtojë të dhëna demo
+### Step 4: Update CORS
 
-**G. Testo Aplikacionin**
-1. Shko te URL e frontend
-2. Provo të bësh login me:
-   - Admin: `admin@bookease.com` / `admin123`
-   - Client: `client@example.com` / `client123`
+1. Get frontend URL from Static Site dashboard
+2. Go to Backend Service → Environment
+3. Update `CORS_ORIGINS` with frontend URL
+4. Save changes (backend will restart)
 
----
+### Step 5: Seed Database
 
-### 2. Vercel (Frontend) + Railway (Backend)
+Backend auto-seeds on startup if database is empty. To manually seed:
 
-#### Frontend në Vercel:
-1. Shko në https://vercel.com
-2. Regjistrohu me GitHub
-3. Import repository: `flaviadervishaj/Book-Ease`
-4. Root Directory: `frontend`
-5. Build Command: `npm run build`
-6. Output Directory: `dist`
-7. Environment Variable: `VITE_API_URL` = (URL e backend)
-8. Deploy
+1. Open backend URL: `https://bookease-backend.onrender.com/api/admin/seed`
+2. Or use POST request to the same endpoint
 
-#### Backend në Railway:
-1. Shko në https://railway.app
-2. Regjistrohu me GitHub
-3. New Project → Deploy from GitHub repo
-4. Zgjidh repository-n tënde
-5. Add PostgreSQL service
-6. Në web service, shto environment variables:
-   - `DATABASE_URL` = (nga PostgreSQL service)
-   - `JWT_SECRET_KEY` = (gjenero)
-   - `CORS_ORIGINS` = (URL e Vercel frontend)
-7. Start Command: `cd backend && gunicorn app:app --bind 0.0.0.0:$PORT`
+**Demo Accounts:**
+- Admin: `admin@bookease.com` / `admin123`
+- Client: `client@example.com` / `client123`
 
----
+### Step 6: Setup Keep-Alive (Prevent Cold Starts)
 
-### 3. Heroku (Opsion i vjetër, por ende funksionon)
+**Option 1: cron-job.org (Free)**
 
-**Backend:**
-1. Krijo `Procfile` në root:
-   ```
-   web: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT
-   ```
-2. Heroku CLI:
-   ```bash
-   heroku create bookease-backend
-   heroku addons:create heroku-postgresql:mini
-   heroku config:set JWT_SECRET_KEY=your-secret-key
-   heroku config:set CORS_ORIGINS=https://your-frontend-url.vercel.app
-   git push heroku main
-   ```
+1. Go to https://cron-job.org
+2. Sign up (free)
+3. Create cronjob:
+   - **Title:** `BookEase Keep-Alive`
+   - **URL:** `https://bookease-backend.onrender.com/api/ping`
+   - **Schedule:** Every 10 minutes (`*/10 * * * *`)
+   - **Method:** GET
+4. Click "Create cronjob"
 
-**Frontend:**
-- Deploy në Vercel ose Netlify (si më sipër)
+**Option 2: UptimeRobot (Alternative)**
 
----
+1. Go to https://uptimerobot.com
+2. Sign up (free)
+3. Add Monitor → HTTP(s)
+4. Configure:
+   - **URL:** `https://bookease-backend.onrender.com/api/ping`
+   - **Interval:** 5 minutes
+5. Click "Create Monitor"
 
 ## Environment Variables
 
-### Backend (.env ose në platform)
+### Backend
 ```env
 DATABASE_URL=postgresql://user:password@host:port/database
-JWT_SECRET_KEY=your-very-secret-key-here
+JWT_SECRET_KEY=your-secret-key-here
 CORS_ORIGINS=https://your-frontend-url.com
 FLASK_ENV=production
 ```
 
-### Frontend (në platform)
+### Frontend
 ```env
 VITE_API_URL=https://your-backend-url.com
 ```
 
----
-
 ## Troubleshooting
 
-### Backend nuk start-on
-- Kontrollo logs në Render dashboard
-- Sigurohu që `gunicorn` është në `requirements.txt`
-- Kontrollo që `DATABASE_URL` është e saktë
+### Backend won't start
+- Check logs in Render dashboard
+- Verify `DATABASE_URL` is correct
+- Ensure `gunicorn` is in `requirements.txt`
+- Check build/start commands
 
-### Frontend nuk lidhet me backend
-- Kontrollo `CORS_ORIGINS` në backend
-- Sigurohu që `VITE_API_URL` është e saktë në frontend
-- Kontrollo network tab në browser console
+### Frontend can't connect to backend
+- Verify `VITE_API_URL` in frontend environment
+- Check `CORS_ORIGINS` in backend environment
+- Check browser console for errors
+- Verify backend URL is accessible
 
 ### Database errors
-- Sigurohu që database është krijuar dhe running
-- Kontrollo connection string
-- Ekzekuto `python seed.py` për të krijuar tabelat
+- Verify `DATABASE_URL` connection string
+- Check database is running
+- Ensure SSL mode is enabled (auto-handled in code)
 
 ### CORS errors
-- Shto frontend URL në `CORS_ORIGINS` në backend
-- Sigurohu që ka `supports_credentials=True` në CORS config
+- Add frontend URL to `CORS_ORIGINS` in backend
+- Ensure no trailing slash in URLs
+- Restart backend after changes
 
----
+### Keep-alive not working
+- Verify cron job URL is correct
+- Check cron job execution history
+- Test endpoint manually: `https://your-backend.onrender.com/api/ping`
 
-## Si të Shmangësh Cold Starts në Render Free Plan
+## Alternative Platforms
 
-Render free plan ka **cold starts** (aplikacioni "fjet" pas 15 min pa aktivitet). Por mund ta mbash të zgjuar me **keep-alive ping**:
+### Railway.app
+- Free tier with $5 credit/month
+- No sleep mode
+- Easy PostgreSQL setup
 
-### Metoda 1: Cron Job External (Rekomanduar)
+### Vercel (Frontend) + Railway (Backend)
+- Vercel for static hosting
+- Railway for backend and database
 
-1. **Krijo account në cron-job.org** (falas):
-   - Shko në https://cron-job.org
-   - Regjistrohu (falas)
-
-2. **Krijo cron job:**
-   - URL: `https://bookease-backend.onrender.com/api/ping`
-   - Schedule: **Çdo 10 minuta** (`*/10 * * * *`)
-   - Method: GET
-   - Kliko "Create Cronjob"
-
-3. **Rezultati:**
-   - Backend do të marrë ping çdo 10 minuta
-   - Nuk do të pushojë në sleep mode
-   - **Limit:** Render free plan ka 750 orë/muaj (mjafton për 24/7)
-
-### Metoda 2: UptimeRobot (Alternativë)
-
-1. Shko në https://uptimerobot.com
-2. Krijo account falas
-3. Add Monitor → HTTP(s)
-4. URL: `https://bookease-backend.onrender.com/api/ping`
-5. Interval: 5 minuta
-6. Kliko "Create Monitor"
-
-### Opsione të Tjera pa Cold Starts
-
-**Railway.app:**
-- Ka plan free me $5 credit/muaj
-- Nuk ka sleep mode
-- Më e shtrenjtë pasi të mbarojë krediti
-
-**Fly.io:**
-- Plan free me kufizime
-- Nuk ka sleep mode
-- Më kompleks për setup
-
-**Replit:**
-- Plan free por ka kufizime
-- Nuk ka sleep mode nëse e mbash të hapur
-
----
-
-## Tips për Production
+## Production Tips
 
 1. **Security:**
-   - Përdor JWT_SECRET_KEY të fortë (gjenero me `openssl rand -hex 32`)
-   - Aktivizo HTTPS (Render e bën automatikisht)
-   - Mos e commit-o `.env` file
+   - Use strong `JWT_SECRET_KEY` (generate with `openssl rand -hex 32`)
+   - Enable HTTPS (automatic on Render)
+   - Never commit `.env` files
 
 2. **Performance:**
-   - Plan free në Render ka cold starts (aplikacioni "fjet" pas 15 min pa aktivitet)
-   - **Zgjidhje:** Përdor cron-job.org për keep-alive ping
-   - Për production real pa cold starts, konsidero plan paid ($7/muaj Starter plan)
+   - Use keep-alive ping to prevent cold starts
+   - Monitor usage to stay within free tier limits
+   - Consider paid plan for production use
 
 3. **Monitoring:**
-   - Render ka built-in logs
-   - Mund të shtosh monitoring services si Sentry
+   - Use Render built-in logs
+   - Set up error tracking (e.g., Sentry)
+   - Monitor database usage
 
-4. **Database Backups:**
-   - Render free plan nuk ka automatic backups
-   - Konsidero të bësh manual backup periodik
-
----
-
-## Pas Deploy
-
-1. Testo të gjitha features:
-   - Login/Register
-   - Browse services
-   - Book appointment
-   - Admin dashboard
-   - Working hours
-
-2. Përditëso README.md me live URLs
-
-3. Konsidero të shtosh:
-   - Custom domain
-   - SSL certificate (Render e bën automatikisht)
-   - Analytics (Google Analytics, etc.)
-
----
+4. **Backups:**
+   - Free plan doesn't include automatic backups
+   - Consider manual backups for important data
 
 ## Support
 
-Nëse ke probleme:
-1. Kontrollo logs në platform dashboard
-2. Verifiko environment variables
-3. Testo lokal për të siguruar që funksionon
-4. Kontrollo dokumentacionin e platform-ës
-
----
-
-**Deploy i suksesshëm! 🚀**
-
+For issues:
+1. Check Render logs
+2. Verify environment variables
+3. Test locally first
+4. Check platform documentation

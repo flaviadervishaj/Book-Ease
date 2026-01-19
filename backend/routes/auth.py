@@ -7,7 +7,6 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """User registration endpoint"""
     try:
         data = request.get_json()
         
@@ -18,26 +17,21 @@ def register():
         password = data['password']
         role = data.get('role', 'client').lower()
         
-        # Validate role
         if role not in ['client', 'admin']:
             return jsonify({'error': 'Invalid role. Must be "client" or "admin"'}), 400
         
-        # Check if user already exists
         if User.query.filter_by(email=email).first():
             return jsonify({'error': 'Email already registered'}), 400
         
-        # Password validation
         if len(password) < 6:
             return jsonify({'error': 'Password must be at least 6 characters'}), 400
         
-        # Create new user
         user = User(email=email, role=role)
         user.set_password(password)
         
         db.session.add(user)
         db.session.commit()
         
-        # Generate JWT token
         access_token = create_access_token(identity={'id': user.id, 'role': user.role})
         
         return jsonify({
@@ -52,7 +46,6 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """User login endpoint"""
     try:
         data = request.get_json()
         
@@ -62,13 +55,11 @@ def login():
         email = data['email'].strip().lower()
         password = data['password']
         
-        # Find user
         user = User.query.filter_by(email=email).first()
         
         if not user or not user.check_password(password):
             return jsonify({'error': 'Invalid email or password'}), 401
         
-        # Generate JWT token with user info
         access_token = create_access_token(identity={'id': user.id, 'role': user.role})
         
         return jsonify({
