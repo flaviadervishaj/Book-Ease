@@ -9,6 +9,7 @@ from routes.appointments import appointments_bp
 from routes.availability import availability_bp
 from routes.admin import admin_bp
 from routes.health import health_bp
+from models import User, Service
 
 def create_app():
     """Application factory pattern"""
@@ -33,11 +34,25 @@ def create_app():
     def health_check():
         return jsonify({'status': 'ok', 'message': 'BookEase API is running'}), 200
     
-    # Create tables
+    # Create tables and seed database if empty
     with app.app_context():
         try:
             db.create_all()
             print("Database tables created successfully")
+            
+            # Auto-seed database if empty (for free plan without Shell access)
+            user_count = User.query.count()
+            service_count = Service.query.count()
+            
+            if user_count == 0 or service_count == 0:
+                print("Database appears empty, seeding with demo data...")
+                try:
+                    from seed import seed_database
+                    seed_database()
+                    print("Database seeded successfully!")
+                except Exception as seed_error:
+                    print(f"Warning: Could not seed database: {seed_error}")
+                    print("You can manually seed by calling /api/admin/seed endpoint")
         except Exception as e:
             print(f"Warning: Could not create database tables: {e}")
     
