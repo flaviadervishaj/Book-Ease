@@ -53,7 +53,12 @@ Complete guide for deploying BookEase service booking platform to production.
    - **Publish Directory:** `dist`
 4. Add Environment Variable:
    - `VITE_API_URL` = (backend URL, e.g., `https://bookease-backend.onrender.com`)
-5. Click "Create Static Site"
+5. **IMPORTANT:** After creating, go to Settings → Redirects/Rewrites
+6. Add Rewrite Rule:
+   - **Source:** `/*`
+   - **Destination:** `/index.html`
+   - **Type:** Rewrite (not Redirect)
+7. Click "Create Static Site"
 
 ### Step 4: Update CORS
 
