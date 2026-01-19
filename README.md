@@ -199,16 +199,36 @@ The application is fully responsive and optimized for:
 
 ## Deployment
 
-### Backend Deployment
-1. Set environment variables in production
-2. Use a production WSGI server (e.g., Gunicorn)
-3. Configure PostgreSQL database
-4. Set up reverse proxy (Nginx)
+Për udhëzime të detajuara për deploy, shiko [DEPLOY.md](./DEPLOY.md)
 
-### Frontend Deployment
-1. Build for production: `npm run build`
-2. Deploy `dist/` folder to static hosting (Vercel, Netlify, etc.)
-3. Update API base URL in production
+### Quick Start me Render.com
+
+1. **Krijo llogari në Render.com** dhe lidh repository-n tënde
+2. **Deploy Database:**
+   - Krijo PostgreSQL database në Render
+   - RUAJ connection string-in
+3. **Deploy Backend:**
+   - Krijo Web Service me Python
+   - Root Directory: `backend`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2`
+   - Environment Variables:
+     - `DATABASE_URL` = (nga PostgreSQL)
+     - `JWT_SECRET_KEY` = (gjenero me `openssl rand -hex 32`)
+     - `CORS_ORIGINS` = (URL e frontend pas deploy)
+4. **Deploy Frontend:**
+   - Krijo Static Site
+   - Root Directory: `frontend`
+   - Build Command: `npm install && npm run build`
+   - Publish Directory: `frontend/dist`
+   - Environment Variable: `VITE_API_URL` = (URL e backend)
+5. **Seed Database:**
+   - Shko te backend Shell dhe ekzekuto: `cd backend && python seed.py`
+
+Ose përdor `render.yaml` për automated deployment:
+- Render do të lexojë `render.yaml` dhe do të konfigurojë gjithçka automatikisht
+
+Për opsione të tjera (Vercel, Railway, Heroku), shiko [DEPLOY.md](./DEPLOY.md)
 
 ## Contributing
 

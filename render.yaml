@@ -1,0 +1,36 @@
+services:
+  # Backend API Service
+  - type: web
+    name: bookease-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://bookease-frontend.onrender.com
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+  # Frontend Service (Static Site)
+  - type: static
+    name: bookease-frontend
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://bookease-backend.onrender.com
+
+databases:
+  # PostgreSQL Database
+  - name: bookease-db
+    plan: free
+    databaseName: bookease_db
+    user: bookease_user
+
