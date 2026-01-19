@@ -5,7 +5,17 @@ load_dotenv()
 
 class Config:
     """Application configuration"""
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/bookease_db')
+    # Get DATABASE_URL and add SSL mode for Render PostgreSQL
+    database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/bookease_db')
+    
+    # Add SSL mode for production (Render PostgreSQL requires SSL)
+    if 'render.com' in database_url or 'onrender.com' in database_url:
+        # If DATABASE_URL doesn't already have sslmode, add it
+        if 'sslmode' not in database_url:
+            separator = '&' if '?' in database_url else '?'
+            database_url = f"{database_url}{separator}sslmode=require"
+    
+    SQLALCHEMY_DATABASE_URI = database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'dev-secret-key-change-in-production')
     JWT_ACCESS_TOKEN_EXPIRES = False
