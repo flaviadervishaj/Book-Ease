@@ -81,12 +81,24 @@ def create_appointment():
         
         # Parse start time
         try:
-            start_time = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
-            # Convert to local time if needed
+            start_time_str = data['start_time']
+            # Handle different datetime formats
+            if 'Z' in start_time_str:
+                # ISO format with Z (UTC)
+                start_time_str = start_time_str.replace('Z', '+00:00')
+            
+            # Try parsing with timezone first
+            try:
+                start_time = datetime.fromisoformat(start_time_str)
+            except ValueError:
+                # Try parsing without timezone
+                start_time = datetime.strptime(start_time_str.split('+')[0].split('Z')[0], '%Y-%m-%dT%H:%M:%S')
+            
+            # Convert to naive datetime (remove timezone info)
             if start_time.tzinfo:
                 start_time = start_time.replace(tzinfo=None)
-        except (ValueError, AttributeError):
-            return jsonify({'error': 'Invalid start_time format. Use ISO 8601 format'}), 400
+        except (ValueError, AttributeError, KeyError) as e:
+            return jsonify({'error': f'Invalid start_time format: {str(e)}. Use ISO 8601 format'}), 400
         
         # Calculate end time
         end_time = start_time + timedelta(minutes=service.duration_minutes)
