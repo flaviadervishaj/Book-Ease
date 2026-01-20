@@ -10,7 +10,9 @@ def get_current_user():
     """Helper to get current user from JWT"""
     identity = get_jwt_identity()
     from models import User
-    return User.query.get(identity['id'])
+    # Identity is now a string (user ID), not a dictionary
+    user_id = int(identity) if isinstance(identity, str) else identity
+    return User.query.get(user_id)
 
 @appointments_bp.route('', methods=['GET'])
 @jwt_required()
@@ -104,8 +106,17 @@ def create_appointment():
                 start_time = datetime.fromisoformat(start_time_str)
             except ValueError:
                 # Try parsing without timezone (remove timezone part)
-                clean_str = start_time_str.split('+')[0].split('Z')[0].split('.')[0]
+                # Handle formats like: 2024-05-12T13:05:00 or 2024-05-12T13:05:00.000
+                clean_str = start_time_str.split('+')[0].split('Z')[0]
+                # Remove timezone offset if present (e.g., -05:00)
+                if 'T' in clean_str:
+                    parts = clean_str.split('T')
+                    if len(parts) == 2:
+                        time_part = parts[1].split('-')[0].split('+')[0]
+                        clean_str = f"{parts[0]}T{time_part}"
+                
                 try:
+                    # Try with seconds first
                     start_time = datetime.strptime(clean_str, '%Y-%m-%dT%H:%M:%S')
                 except ValueError:
                     # Try with milliseconds
@@ -122,6 +133,10 @@ def create_appointment():
                 # Convert to UTC first, then remove timezone
                 start_time = start_time.astimezone(timezone.utc).replace(tzinfo=None)
         except (ValueError, AttributeError, KeyError, TypeError) as e:
+            import traceback
+            print(f"Error parsing start_time: {str(e)}")
+            print(f"Received start_time: {data.get('start_time')}")
+            print(traceback.format_exc())
             return jsonify({
                 'error': f'Invalid start_time format: {str(e)}. Expected ISO 8601 format (e.g., 2024-01-20T14:30:00Z)',
                 'received': data.get('start_time')
@@ -166,6 +181,19 @@ def create_appointment():
         # Log the full traceback for debugging
         print(f"Error creating appointment: {error_details}")
         print(traceback.format_exc())
+        
+        # Check if it's a database constraint error
+        if 'UNIQUE constraint' in error_details or 'duplicate' in error_details.lower():
+            return jsonify({
+                'error': 'This appointment slot is already booked. Please select another time.'
+            }), 400
+        
+        # Check if it's a database connection error
+        if 'OperationalError' in str(type(e)) or 'connection' in error_details.lower():
+            return jsonify({
+                'error': 'Database connection error. Please try again later.'
+            }), 500
+        
         return jsonify({
             'error': f'Failed to create appointment: {error_details}',
             'details': str(e) if current_app.config.get('DEBUG') else None

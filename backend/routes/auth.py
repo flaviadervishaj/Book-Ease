@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
 from models import db, User
 from datetime import datetime
@@ -32,7 +32,12 @@ def register():
         db.session.add(user)
         db.session.commit()
         
-        access_token = create_access_token(identity={'id': user.id, 'role': user.role})
+        # Create token with user ID as string (Flask-JWT-Extended requires string identity)
+        # Store role in additional_claims
+        access_token = create_access_token(
+            identity=str(user.id),
+            additional_claims={'role': user.role}
+        )
         
         return jsonify({
             'message': 'User registered successfully',
@@ -42,7 +47,23 @@ def register():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        error_details = str(e)
+        print(f"Registration error: {error_details}")
+        print(traceback.format_exc())
+        
+        # Check for specific database errors
+        if 'UNIQUE constraint' in error_details or 'duplicate' in error_details.lower():
+            return jsonify({'error': 'Email already registered'}), 400
+        elif 'OperationalError' in str(type(e)) or 'connection' in error_details.lower():
+            return jsonify({'error': 'Database connection error. Please try again later.'}), 500
+        elif 'IntegrityError' in str(type(e)):
+            return jsonify({'error': 'Email already registered'}), 400
+        
+        return jsonify({
+            'error': f'Registration failed: {error_details}',
+            'details': str(e) if current_app.config.get('DEBUG', False) else None
+        }), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -60,7 +81,12 @@ def login():
         if not user or not user.check_password(password):
             return jsonify({'error': 'Invalid email or password'}), 401
         
-        access_token = create_access_token(identity={'id': user.id, 'role': user.role})
+        # Create token with user ID as string (Flask-JWT-Extended requires string identity)
+        # Store role in additional_claims
+        access_token = create_access_token(
+            identity=str(user.id),
+            additional_claims={'role': user.role}
+        )
         
         return jsonify({
             'message': 'Login successful',

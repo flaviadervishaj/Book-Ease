@@ -18,6 +18,23 @@ def create_app():
     jwt = JWTManager(app)
     CORS(app, origins=app.config['CORS_ORIGINS'], supports_credentials=True)
     
+    # Add JWT error handlers - ensure they return 401, not 422
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return jsonify({'error': 'Token has expired', 'code': 'TOKEN_EXPIRED'}), 401
+    
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return jsonify({'error': f'Invalid token: {str(error)}', 'code': 'INVALID_TOKEN'}), 401
+    
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return jsonify({'error': 'Authorization token is missing', 'code': 'MISSING_TOKEN'}), 401
+    
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        return jsonify({'error': 'Token has been revoked', 'code': 'TOKEN_REVOKED'}), 401
+    
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(services_bp, url_prefix='/api/services')
     app.register_blueprint(appointments_bp, url_prefix='/api/appointments')

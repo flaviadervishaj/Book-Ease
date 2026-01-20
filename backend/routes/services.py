@@ -9,7 +9,9 @@ def get_current_user():
     """Helper to get current user from JWT"""
     identity = get_jwt_identity()
     from models import User
-    return User.query.get(identity['id'])
+    # Identity is now a string (user ID), not a dictionary
+    user_id = int(identity) if isinstance(identity, str) else identity
+    return User.query.get(user_id)
 
 @services_bp.route('', methods=['GET'])
 def get_services():

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from utils.booking_logic import get_available_slots, format_time_slot
 
 availability_bp = Blueprint('availability', __name__)
@@ -32,14 +32,20 @@ def get_availability():
         # Get available slots
         available_slots = get_available_slots(date, service.duration_minutes)
         
-        # Format slots
-        formatted_slots = [
-            {
+        # Format slots - ensure datetime includes timezone info
+        formatted_slots = []
+        for slot in available_slots:
+            # Convert naive datetime to UTC-aware datetime for API response
+            if slot.tzinfo is None:
+                # Assume slot is in UTC (since database stores naive datetime as UTC)
+                slot_utc = slot.replace(tzinfo=timezone.utc)
+            else:
+                slot_utc = slot.astimezone(timezone.utc)
+            
+            formatted_slots.append({
                 'time': format_time_slot(slot),
-                'datetime': slot.isoformat()
-            }
-            for slot in available_slots
-        ]
+                'datetime': slot_utc.isoformat()
+            })
         
         return jsonify({
             'date': date_str,

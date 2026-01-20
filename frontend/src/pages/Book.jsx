@@ -109,11 +109,28 @@ const Book = () => {
       // Ensure datetime is in proper ISO format
       let datetimeToSend = selectedSlot.datetime
       
-      // If datetime doesn't have timezone info, add it
-      if (datetimeToSend && !datetimeToSend.includes('Z') && !datetimeToSend.includes('+') && !datetimeToSend.includes('-')) {
-        // Parse and convert to ISO format with timezone
+      // Ensure datetime is in ISO format with timezone
+      // Backend now returns UTC datetime with timezone info (ends with Z or +00:00)
+      if (datetimeToSend) {
+        // Backend should return datetime with timezone (ends with Z or +00:00)
+        // If it already has timezone, use it as is
+        if (datetimeToSend.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(datetimeToSend)) {
+          // Already has timezone, use as is
+        } else {
+          // No timezone, treat as UTC and add Z
+          datetimeToSend = datetimeToSend + 'Z'
+        }
+        
+        // Validate the datetime format
         const dt = new Date(datetimeToSend)
+        if (isNaN(dt.getTime())) {
+          throw new Error(`Invalid datetime format: ${datetimeToSend}`)
+        }
+        
+        // Convert to ISO string (this ensures proper format)
         datetimeToSend = dt.toISOString()
+      } else {
+        throw new Error('No datetime selected')
       }
 
       const response = await api.post('/appointments', {
@@ -138,11 +155,8 @@ const Book = () => {
         if (error.response.status === 422 || error.response.status === 400) {
           errorMsg = error.response.data?.error || error.response.data?.message || 'Invalid booking data. Please check your selection.'
         } else if (error.response.status === 401) {
-          errorMsg = 'Please log in to book an appointment'
-          // Redirect to login if unauthorized
-          setTimeout(() => {
-            navigate('/login')
-          }, 2000)
+          errorMsg = 'Please log in to book an appointment. Your session may have expired.'
+          // Don't redirect here - let the interceptor handle it
         } else if (error.response.status === 404) {
           errorMsg = error.response.data?.error || 'Service not found'
         } else {

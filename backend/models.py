@@ -1,8 +1,12 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
+
+def get_utc_now():
+    """Helper function to get current UTC time as naive datetime"""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 class User(db.Model):
     """User model with role-based access"""
@@ -12,7 +16,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default='client')  # 'admin' or 'client'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_utc_now)
     
     # Relationships
     appointments = db.relationship('Appointment', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -49,7 +53,7 @@ class Service(db.Model):
     price = db.Column(db.Numeric(10, 2), nullable=False)
     address = db.Column(db.String(500), nullable=True)
     image_url = db.Column(db.String(500), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_utc_now)
     
     # Relationships
     appointments = db.relationship('Appointment', backref='service', lazy=True, cascade='all, delete-orphan')
@@ -77,7 +81,7 @@ class Appointment(db.Model):
     start_time = db.Column(db.DateTime, nullable=False, index=True)
     end_time = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='confirmed')  # 'confirmed', 'cancelled', 'completed'
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_utc_now)
     
     def to_dict(self, include_user=False):
         """Convert appointment to dictionary"""
