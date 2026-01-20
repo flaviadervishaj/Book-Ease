@@ -22,6 +22,9 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: var(--spacing-xl);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .booking-steps {
@@ -39,6 +42,10 @@
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
   animation: slideIn 0.5s ease-out;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .step:hover {
@@ -78,6 +85,7 @@
 .service-select,
 .date-input {
   width: 100%;
+  max-width: 100%;
   padding: 14px 16px;
   border: 2px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -86,6 +94,22 @@
   color: var(--text-primary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 500;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0; /* Prevents flex items from overflowing */
+  flex-shrink: 1; /* Allows input to shrink if needed */
+}
+
+.book-page .input-group {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
 }
 
 .service-select:focus,
@@ -312,14 +336,25 @@
   .booking-container {
     grid-template-columns: 1fr;
     gap: var(--spacing-lg);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0;
   }
 
   .booking-steps {
     gap: var(--spacing-lg);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .step {
     padding: var(--spacing-md);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .step-header {
@@ -338,8 +373,20 @@
 
   .service-select,
   .date-input {
-    font-size: 14px;
-    padding: 10px 14px;
+    font-size: 16px; /* Larger font for mobile to prevent zoom */
+    padding: 12px 14px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .book-page .input-group {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
   }
 
   .service-preview {
@@ -349,14 +396,22 @@
 
   .date-info {
     padding: var(--spacing-sm);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .day-name {
     font-size: 14px;
+    word-wrap: break-word;
   }
 
   .date-display {
     font-size: 15px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .time-slots {
@@ -399,12 +454,59 @@
 }
 
 @media (max-width: 480px) {
+  .book-page {
+    padding: 0 var(--spacing-xs);
+  }
+
   .page-header h1 {
     font-size: 24px;
   }
 
+  .step {
+    padding: var(--spacing-sm);
+    overflow: hidden;
+  }
+
   .step h3 {
     font-size: 16px;
+  }
+
+  .service-select,
+  .date-input {
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px 10px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .book-page .input-group {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+  }
+
+  .date-info {
+    padding: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .day-name {
+    font-size: 13px;
+  }
+
+  .date-display {
+    font-size: 14px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .time-slots {

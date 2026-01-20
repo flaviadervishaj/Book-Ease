@@ -64,6 +64,7 @@ const Book = () => {
 
     setLoadingSlots(true)
     setSelectedSlot(null)
+    setError('')
     try {
       const response = await api.get('/availability', {
         params: {
@@ -72,8 +73,18 @@ const Book = () => {
         }
       })
       setAvailableSlots(response.data.available_slots || [])
+      if (response.data.available_slots && response.data.available_slots.length === 0) {
+        setError('No available time slots for this date. Please try another date.')
+      }
     } catch (error) {
-      toast.error('Failed to load available time slots')
+      let errorMsg = 'Failed to load available time slots'
+      if (error.response) {
+        errorMsg = error.response.data?.error || error.response.data?.message || errorMsg
+      } else if (error.request) {
+        errorMsg = 'Unable to connect to server. Please check your internet connection.'
+      }
+      toast.error(errorMsg)
+      setError(errorMsg)
       setAvailableSlots([])
     } finally {
       setLoadingSlots(false)
@@ -85,27 +96,68 @@ const Book = () => {
   }
 
   const handleConfirmBooking = async () => {
-    if (!selectedService || !selectedSlot) return
+    if (!selectedService || !selectedSlot) {
+      toast.error('Please select a service and time slot')
+      return
+    }
 
     setLoading(true)
     setError('')
     setShowConfirm(false)
 
     try {
+      // Ensure datetime is in proper ISO format
+      let datetimeToSend = selectedSlot.datetime
+      
+      // If datetime doesn't have timezone info, add it
+      if (datetimeToSend && !datetimeToSend.includes('Z') && !datetimeToSend.includes('+') && !datetimeToSend.includes('-')) {
+        // Parse and convert to ISO format with timezone
+        const dt = new Date(datetimeToSend)
+        datetimeToSend = dt.toISOString()
+      }
+
       const response = await api.post('/appointments', {
         service_id: parseInt(selectedService),
-        start_time: selectedSlot.datetime
+        start_time: datetimeToSend
       })
       
       if (response.data) {
         toast.success('Appointment booked successfully!')
-        navigate('/my-appointments')
+        // Small delay to show success message before navigation
+        setTimeout(() => {
+          navigate('/my-appointments')
+        }, 500)
+      } else {
+        throw new Error('No response data received')
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to book appointment'
+      let errorMsg = 'Failed to book appointment'
+      
+      if (error.response) {
+        // Handle different error status codes
+        if (error.response.status === 422 || error.response.status === 400) {
+          errorMsg = error.response.data?.error || error.response.data?.message || 'Invalid booking data. Please check your selection.'
+        } else if (error.response.status === 401) {
+          errorMsg = 'Please log in to book an appointment'
+          // Redirect to login if unauthorized
+          setTimeout(() => {
+            navigate('/login')
+          }, 2000)
+        } else if (error.response.status === 404) {
+          errorMsg = error.response.data?.error || 'Service not found'
+        } else {
+          errorMsg = error.response.data?.error || error.response.data?.message || `Booking failed: ${error.response.status}`
+        }
+      } else if (error.request) {
+        errorMsg = 'Unable to connect to server. Please check your internet connection.'
+      } else {
+        errorMsg = error.message || 'An unexpected error occurred'
+      }
+      
       setError(errorMsg)
       toast.error(errorMsg)
       setLoading(false)
+      // Allow user to try again by keeping the dialog closed but allowing them to click Book Now again
     }
   }
 
@@ -153,6 +205,7 @@ const Book = () => {
                   setSelectedService(e.target.value)
                   setSelectedDate('')
                   setSelectedSlot(null)
+                  setError('')
                 }}
                 className="service-select"
               >
@@ -191,10 +244,12 @@ const Book = () => {
                   onChange={(e) => {
                     setSelectedDate(e.target.value)
                     setSelectedSlot(null)
+                    setError('')
                   }}
                   min={today}
                   max={maxDateStr}
                   className="date-input"
+                  style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                 />
                 {selectedDate && (
                   <div className="date-info">
@@ -216,6 +271,11 @@ const Book = () => {
                 <span className="step-number">3</span>
                 <h3>Select Time</h3>
               </div>
+              {error && !loadingSlots && (
+                <div className="error-message" style={{ marginBottom: '16px', padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(255, 0, 0, 0.1)', border: '1px solid rgba(255, 0, 0, 0.3)', color: '#ff6b6b' }}>
+                  {error}
+                </div>
+              )}
               {loadingSlots ? (
                 <div className="loading">Loading available slots...</div>
               ) : availableSlots.length === 0 ? (
@@ -226,7 +286,10 @@ const Book = () => {
                   <p><strong>No available time slots for this date.</strong></p>
                   <p className="hint">Try selecting a different date or check back later.</p>
                   <button
-                    onClick={() => setSelectedDate('')}
+                    onClick={() => {
+                      setSelectedDate('')
+                      setError('')
+                    }}
                     className="btn btn-secondary"
                     style={{ marginTop: '12px' }}
                   >
@@ -242,7 +305,10 @@ const Book = () => {
                     {availableSlots.map((slot) => (
                       <button
                         key={slot.datetime}
-                        onClick={() => handleSlotSelect(slot)}
+                        onClick={() => {
+                          handleSlotSelect(slot)
+                          setError('')
+                        }}
                         disabled={loading}
                         className={`time-slot-btn ${selectedSlot?.datetime === slot.datetime ? 'selected' : ''}`}
                       >
@@ -310,12 +376,20 @@ const Book = () => {
           </div>
         )}
 
-        {error && <div className="error-message">{error}</div>}
+        {error && !loadingSlots && (
+          <div className="error-message" style={{ marginTop: '16px', padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(255, 0, 0, 0.1)', border: '1px solid rgba(255, 0, 0, 0.3)', color: '#ff6b6b' }}>
+            {error}
+          </div>
+        )}
       </div>
 
       <ConfirmationDialog
         isOpen={showConfirm}
-        onClose={() => setShowConfirm(false)}
+        onClose={() => {
+          if (!loading) {
+            setShowConfirm(false)
+          }
+        }}
         onConfirm={handleConfirmBooking}
         title="Confirm Booking"
         message={
@@ -326,6 +400,7 @@ const Book = () => {
         confirmText="Confirm"
         cancelText="Cancel"
         type="success"
+        loading={loading}
       />
     </div>
   )

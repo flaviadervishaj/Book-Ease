@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Appointment, Service
 from datetime import datetime, timedelta, timezone
@@ -69,19 +69,30 @@ def create_appointment():
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
         
-        required_fields = ['service_id', 'start_time']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
+        # Validate required fields
+        if 'service_id' not in data or data.get('service_id') is None:
+            return jsonify({'error': 'service_id is required'}), 400
+        
+        if 'start_time' not in data or not data.get('start_time'):
+            return jsonify({'error': 'start_time is required'}), 400
+        
+        # Validate service_id is an integer
+        try:
+            service_id = int(data['service_id'])
+        except (ValueError, TypeError):
+            return jsonify({'error': 'service_id must be a valid integer'}), 400
         
         # Get service
-        service = Service.query.get(data['service_id'])
+        service = Service.query.get(service_id)
         if not service:
-            return jsonify({'error': 'Service not found'}), 404
+            return jsonify({'error': f'Service with id {service_id} not found'}), 404
         
         # Parse start time
         try:
             start_time_str = str(data['start_time']).strip()
+            
+            if not start_time_str:
+                return jsonify({'error': 'start_time is required and cannot be empty'}), 400
             
             # Handle different datetime formats
             if 'Z' in start_time_str:
@@ -101,14 +112,20 @@ def create_appointment():
                     try:
                         start_time = datetime.strptime(clean_str, '%Y-%m-%dT%H:%M:%S.%f')
                     except ValueError:
-                        return jsonify({'error': f'Invalid start_time format: {clean_str}. Expected ISO 8601 format'}), 400
+                        return jsonify({
+                            'error': f'Invalid start_time format: "{clean_str}". Expected ISO 8601 format (e.g., 2024-01-20T14:30:00Z or 2024-01-20T14:30:00)',
+                            'received': data.get('start_time')
+                        }), 400
             
             # Convert to naive datetime (remove timezone info) for database storage
             if start_time.tzinfo:
                 # Convert to UTC first, then remove timezone
                 start_time = start_time.astimezone(timezone.utc).replace(tzinfo=None)
         except (ValueError, AttributeError, KeyError, TypeError) as e:
-            return jsonify({'error': f'Invalid start_time format: {str(e)}. Expected ISO 8601 format (e.g., 2024-01-20T14:30:00Z)'}), 400
+            return jsonify({
+                'error': f'Invalid start_time format: {str(e)}. Expected ISO 8601 format (e.g., 2024-01-20T14:30:00Z)',
+                'received': data.get('start_time')
+            }), 400
         
         # Calculate end time
         end_time = start_time + timedelta(minutes=service.duration_minutes)
@@ -144,7 +161,15 @@ def create_appointment():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        import traceback
+        error_details = str(e)
+        # Log the full traceback for debugging
+        print(f"Error creating appointment: {error_details}")
+        print(traceback.format_exc())
+        return jsonify({
+            'error': f'Failed to create appointment: {error_details}',
+            'details': str(e) if current_app.config.get('DEBUG') else None
+        }), 500
 
 @appointments_bp.route('/<int:appointment_id>', methods=['GET'])
 @jwt_required()

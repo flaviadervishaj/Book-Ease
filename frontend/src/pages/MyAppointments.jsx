@@ -23,16 +23,33 @@ const MyAppointments = () => {
 
   const fetchAppointments = async () => {
     setLoading(true)
+    setError('')
     try {
       const params = {}
       if (statusFilter !== 'all') {
         params.status = statusFilter
       }
       const response = await api.get('/appointments', { params })
-      setAppointments(response.data.appointments)
+      setAppointments(response.data.appointments || [])
       setLoading(false)
     } catch (error) {
-      toast.error('Failed to load appointments')
+      let errorMsg = 'Failed to load appointments'
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMsg = 'Please log in to view appointments'
+        } else {
+          errorMsg = error.response.data?.error || error.response.data?.message || `Failed to load appointments: ${error.response.status}`
+        }
+      } else if (error.request) {
+        errorMsg = 'Unable to connect to server. Please check your internet connection.'
+      } else {
+        errorMsg = error.message || 'An unexpected error occurred'
+      }
+      
+      setError(errorMsg)
+      toast.error(errorMsg)
+      setAppointments([])
       setLoading(false)
     }
   }
