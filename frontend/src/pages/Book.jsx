@@ -9,6 +9,7 @@ import './Book.css'
 
 const Book = () => {
   const [searchParams] = useSearchParams()
+  const rescheduleId = searchParams.get('reschedule')
   const navigate = useNavigate()
   const toast = useToast()
   
@@ -133,13 +134,21 @@ const Book = () => {
         throw new Error('No datetime selected')
       }
 
-      const response = await api.post('/appointments', {
-        service_id: parseInt(selectedService),
-        start_time: datetimeToSend
-      })
+      const response = rescheduleId
+        ? await api.put(`/appointments/${rescheduleId}`, {
+          start_time: datetimeToSend
+        })
+        : await api.post('/appointments', {
+          service_id: parseInt(selectedService),
+          start_time: datetimeToSend
+        })
       
       if (response.data) {
-        toast.success('Appointment booked successfully!')
+        toast.success(
+          rescheduleId
+            ? 'Appointment rescheduled successfully!'
+            : 'Appointment booked successfully!'
+        )
         // Small delay to show success message before navigation
         setTimeout(() => {
           navigate('/my-appointments')
@@ -200,8 +209,12 @@ const Book = () => {
     <div className="book-page">
       <div className="page-header">
         <div>
-          <h1>Book Appointment</h1>
-          <p className="page-subtitle">Select a service, date, and available time slot</p>
+          <h1>{rescheduleId ? 'Reschedule Appointment' : 'Book Appointment'}</h1>
+          <p className="page-subtitle">
+            {rescheduleId
+              ? 'Choose a new date and time for your appointment'
+              : 'Select a service, date, and available time slot'}
+          </p>
         </div>
       </div>
 
@@ -384,7 +397,7 @@ const Book = () => {
                 className="btn btn-primary"
                 style={{ width: '100%', marginTop: '16px' }}
               >
-                Book Now
+                {rescheduleId ? 'Choose New Time' : 'Book Now'}
               </button>
             )}
           </div>
@@ -405,11 +418,11 @@ const Book = () => {
           }
         }}
         onConfirm={handleConfirmBooking}
-        title="Confirm Booking"
+        title={rescheduleId ? 'Confirm Reschedule' : 'Confirm Booking'}
         message={
           selectedServiceData && selectedSlot
-            ? `Book ${selectedServiceData.name} on ${new Date(selectedDate).toLocaleDateString()} at ${selectedSlot.time}?`
-            : 'Confirm this booking?'
+            ? `${rescheduleId ? 'Move' : 'Book'} ${selectedServiceData.name} to ${new Date(selectedDate).toLocaleDateString()} at ${selectedSlot.time}?`
+            : rescheduleId ? 'Confirm this new time?' : 'Confirm this booking?'
         }
         confirmText="Confirm"
         cancelText="Cancel"
