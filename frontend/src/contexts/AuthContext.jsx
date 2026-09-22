@@ -1,13 +1,18 @@
-import { createContext, useContext, useState, useEffect } from 'react'
-import api from '../services/api'
+import { createContext, useContext, useEffect, useState } from 'react'
+import api, { updateAuthToken } from '../services/api'
+
 
 const AuthContext = createContext()
 
+const clearSession = () => {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+  updateAuthToken(null)
+}
+
 export const useAuth = () => {
   const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider')
   return context
 }
 
@@ -16,93 +21,69 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
-    
-    if (token && userData) {
+    let isCurrent = true
+
+    const expireSession = () => {
+      clearSession()
+      if (isCurrent) setUser(null)
+    }
+
+    const restoreSession = async () => {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        setLoading(false)
+        return
+      }
+
+      updateAuthToken(token)
       try {
-        setUser(JSON.parse(userData))
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      } catch (error) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        const response = await api.get('/auth/me')
+        if (isCurrent) {
+          localStorage.setItem('user', JSON.stringify(response.data.user))
+          setUser(response.data.user)
+        }
+      } catch {
+        expireSession()
+      } finally {
+        if (isCurrent) setLoading(false)
       }
     }
-    setLoading(false)
+
+    window.addEventListener('auth:expired', expireSession)
+    restoreSession()
+
+    return () => {
+      isCurrent = false
+      window.removeEventListener('auth:expired', expireSession)
+    }
   }, [])
 
-  const login = async (email, password) => {
+  const submitAuth = async (endpoint, payload) => {
     try {
-      const response = await api.post('/auth/login', { email, password })
-      const { access_token, user } = response.data
-      
-      localStorage.setItem('token', access_token)
-      localStorage.setItem('user', JSON.stringify(user))
-      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
-      
-      setUser(user)
+      const response = await api.post(`/auth/${endpoint}`, payload)
+      const { access_token: token, user: authenticatedUser } = response.data
+
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(authenticatedUser))
+      updateAuthToken(token)
+      setUser(authenticatedUser)
       return { success: true }
     } catch (error) {
-      if (error.response) {
-        const errorMessage = error.response.data?.error || 
-                           error.response.data?.message ||
-                           `Login failed: ${error.response.status} ${error.response.statusText}`
-        return {
-          success: false,
-          error: errorMessage
-        }
-      } else if (error.request) {
-        return {
-          success: false,
-          error: 'Unable to connect to server. Please check your internet connection.'
-        }
-      } else {
-        return {
-          success: false,
-          error: error.message || 'An unexpected error occurred. Please try again.'
-        }
+      return {
+        success: false,
+        error: error.response?.data?.error
+          || (error.request
+            ? 'Unable to connect to the server. Please try again.'
+            : 'An unexpected error occurred. Please try again.'),
       }
     }
   }
 
-  const register = async (email, password, role = 'client') => {
-    try {
-      const response = await api.post('/auth/register', { email, password, role })
-      const { access_token, user } = response.data
-      
-      localStorage.setItem('token', access_token)
-      localStorage.setItem('user', JSON.stringify(user))
-      api.defaults.headers.common['Authorization'] = `Bearer ${access_token}`
-      
-      setUser(user)
-      return { success: true }
-    } catch (error) {
-      if (error.response) {
-        const errorMessage = error.response.data?.error || 
-                           error.response.data?.message ||
-                           `Registration failed: ${error.response.status} ${error.response.statusText}`
-        return {
-          success: false,
-          error: errorMessage
-        }
-      } else if (error.request) {
-        return {
-          success: false,
-          error: 'Unable to connect to server. Please check your internet connection.'
-        }
-      } else {
-        return {
-          success: false,
-          error: error.message || 'An unexpected error occurred. Please try again.'
-        }
-      }
-    }
-  }
+  const login = (email, password) => submitAuth('login', { email, password })
+  const register = (email, password) => submitAuth('register', { email, password })
 
   const logout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    delete api.defaults.headers.common['Authorization']
+    clearSession()
     setUser(null)
   }
 

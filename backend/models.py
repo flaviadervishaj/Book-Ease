@@ -19,7 +19,12 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=get_utc_now)
     
     # Relationships
-    appointments = db.relationship('Appointment', backref='user', lazy=True, cascade='all, delete-orphan')
+    appointments = db.relationship(
+        'Appointment',
+        backref='user',
+        lazy='selectin',
+        cascade='all, delete-orphan',
+    )
     
     def set_password(self, password):
         """Hash and set password"""
@@ -56,7 +61,15 @@ class Service(db.Model):
     created_at = db.Column(db.DateTime, default=get_utc_now)
     
     # Relationships
-    appointments = db.relationship('Appointment', backref='service', lazy=True, cascade='all, delete-orphan')
+    __table_args__ = (
+        db.CheckConstraint(
+            'duration_minutes BETWEEN 5 AND 480',
+            name='service_duration_range',
+        ),
+        db.CheckConstraint('price >= 0', name='service_price_non_negative'),
+    )
+
+    appointments = db.relationship('Appointment', backref='service', lazy='selectin')
     
     def to_dict(self):
         """Convert service to dictionary"""
@@ -77,11 +90,30 @@ class Appointment(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
-    service_id = db.Column(db.Integer, db.ForeignKey('services.id'), nullable=False, index=True)
+    service_id = db.Column(
+        db.Integer,
+        db.ForeignKey('services.id', ondelete='RESTRICT'),
+        nullable=False,
+        index=True,
+    )
     start_time = db.Column(db.DateTime, nullable=False, index=True)
     end_time = db.Column(db.DateTime, nullable=False)
     status = db.Column(db.String(20), nullable=False, default='confirmed')  # 'confirmed', 'cancelled', 'completed'
     created_at = db.Column(db.DateTime, default=get_utc_now)
+
+    __table_args__ = (
+        db.CheckConstraint('end_time > start_time', name='appointment_time_order'),
+        db.CheckConstraint(
+            "status IN ('confirmed', 'cancelled', 'completed')",
+            name='appointment_status_valid',
+        ),
+        db.Index(
+            'idx_appointments_status_start_end',
+            'status',
+            'start_time',
+            'end_time',
+        ),
+    )
     
     def to_dict(self, include_user=False):
         """Convert appointment to dictionary"""
@@ -108,6 +140,14 @@ class WorkingHours(db.Model):
     start_time = db.Column(db.Time, nullable=False)
     end_time = db.Column(db.Time, nullable=False)
     is_available = db.Column(db.Boolean, default=True, nullable=False)
+
+    __table_args__ = (
+        db.CheckConstraint(
+            'day_of_week BETWEEN 0 AND 6',
+            name='working_hours_day_range',
+        ),
+        db.CheckConstraint('end_time > start_time', name='working_hours_time_order'),
+    )
     
     def to_dict(self):
         """Convert working hours to dictionary"""
