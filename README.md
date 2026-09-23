@@ -1,170 +1,250 @@
-# BookEase
+# BookEase – Service Booking Platform
 
-BookEase is a full-stack appointment platform for service businesses. Clients can discover services, view real-time availability, book or reschedule appointments, and manage their schedule. Administrators get a dedicated dashboard for services, appointments, working hours, and booking analytics.
+A full-stack web application for managing service bookings and appointments. Clients can browse services, book appointments, and manage their bookings, while administrators can manage services, set working hours, and view all appointments.
 
-## Highlights
+## Features
 
-- Secure client registration and JWT authentication with expiring sessions
-- Role-based access control for client and administrator workflows
-- Availability generated from service duration, working hours, buffer time, and existing bookings
-- Conflict protection for concurrent PostgreSQL booking requests
-- Appointment cancellation and rescheduling with ownership checks
-- Admin analytics, service management, status updates, and working-hour controls
-- Responsive light/dark interface with lazy-loaded admin pages
-- Structured validation and safe API errors
-- Automated API tests for authentication, authorization, and booking conflicts
+### Client Features
+- **User Authentication**: Secure registration and login with JWT
+- **Browse Services**: View all available services with images, descriptions, prices, and addresses
+- **Book Appointments**: Select service, date, and available time slots
+- **Manage Appointments**: View, cancel, or reschedule your appointments
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
 
-## Tech stack
+### Admin Features
+- **Dashboard**: View statistics, charts, and recent appointments
+- **Service Management**: Add, edit, or delete services with images and addresses
+- **Appointment Management**: View all appointments, filter by status/date, and update status
+- **Working Hours**: Set and manage business hours for each day of the week
+- **Analytics**: View booking statistics and popular services
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | React 18, React Router, Axios, Recharts, Vite |
-| Backend | Python, Flask, Flask-JWT-Extended, Flask-SQLAlchemy |
-| Database | PostgreSQL |
-| Testing | pytest |
-| Deployment | Render Blueprint, Gunicorn |
+## Tech Stack
 
-## Architecture
+### Frontend
+- **React 18** with Vite
+- **React Router** for navigation
+- **Axios** for API calls
+- **Recharts** for data visualization
+- **CSS3** with CSS Variables for theming
+- **Responsive Design** with mobile-first approach
 
-The React frontend communicates with a Flask REST API. The API owns authentication, authorization, availability calculation, and all database access. Appointment writes for the same calendar day are serialized on PostgreSQL before availability is rechecked, reducing the risk of simultaneous requests taking the same slot.
+### Backend
+- **Python 3.10+**
+- **Flask** web framework
+- **Flask-JWT-Extended** for authentication
+- **Flask-SQLAlchemy** ORM
+- **Flask-Migrate** for database migrations
+- **PostgreSQL** database
+- **Flask-CORS** for cross-origin requests
 
-## Local setup
+## Prerequisites
 
-### Prerequisites
+- Python 3.10 or higher
+- Node.js 18+ and npm
+- PostgreSQL 12+
+- Git
 
-- Node.js 18 or newer
-- Python 3.10 or newer
-- PostgreSQL 14 or newer
+## Installation
 
-### 1. Backend
+### 1. Clone the repository
+```bash
+git clone <repository-url>
+cd smart-job-application-tracker
+```
 
-From the project root:
+### 2. Backend Setup
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-cp backend/.env.example backend/.env
+# Navigate to backend directory
+cd backend
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+# Copy the example below and adjust values:
+# DATABASE_URL=postgresql://postgres:postgres@localhost:5432/bookease_db
+# JWT_SECRET_KEY=your-secret-key-here
+# CORS_ORIGINS=http://localhost:5173
+
+# Initialize database
+# Make sure PostgreSQL is running
+python -c "from app import create_app; from models import db; app = create_app(); app.app_context().push(); db.create_all()"
+
+# Seed database with demo data
+python seed.py
 ```
 
-On Windows PowerShell, activate the environment with:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Update `backend/.env`:
-
-```dotenv
-DATABASE_URL=postgresql://postgres:password@localhost:5432/bookease_db
-JWT_SECRET_KEY=replace-with-a-long-random-value
-JWT_ACCESS_TOKEN_HOURS=8
-CORS_ORIGINS=http://localhost:5173
-FLASK_ENV=development
-ADMIN_EMAIL=admin@bookease.com
-ADMIN_PASSWORD=replace-with-at-least-12-characters
-```
-
-Create the schema and seed the service catalog, working hours, and your first administrator:
+### 3. Frontend Setup
 
 ```bash
-python backend/seed.py
-```
-
-No shared or default password is included in the repository. The seed command requires your own `ADMIN_PASSWORD`.
-
-Start the API:
-
-```bash
-python backend/app.py
-```
-
-The API runs at `http://localhost:5000`.
-
-### 2. Frontend
-
-In a second terminal:
-
-```bash
+# Navigate to frontend directory (from project root)
 cd frontend
+
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
 ```
 
-Open `http://localhost:5173`. Vite proxies local `/api` requests to Flask.
+### 4. Run the Application
 
-## Verification
-
-Run the backend tests:
-
+**Backend** (from `backend/` directory):
 ```bash
-pip install -r backend/requirements-dev.txt
-pytest backend/tests -q
+python app.py
 ```
+Backend will run on `http://localhost:5000`
 
-Build the production frontend:
-
+**Frontend** (from `frontend/` directory):
 ```bash
-npm --prefix frontend run build
+npm run dev
 ```
+Frontend will run on `http://localhost:5173`
 
-The test suite covers input validation, session restoration, role-escalation prevention, removal of the public seed route, booking conflicts, appointment privacy, and client permissions.
+## Default Accounts
 
-## API overview
+After seeding the database:
 
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| `POST` | `/api/auth/register` | Public | Create a client account |
-| `POST` | `/api/auth/login` | Public | Sign in |
-| `GET` | `/api/auth/me` | Authenticated | Validate and restore a session |
-| `GET` | `/api/services` | Public | List services |
-| `POST` | `/api/services` | Admin | Create a service |
-| `PUT` | `/api/services/:id` | Admin | Update a service |
-| `DELETE` | `/api/services/:id` | Admin | Delete an unused service |
-| `GET` | `/api/availability` | Public | List available slots |
-| `GET` | `/api/appointments` | Authenticated | List permitted appointments |
-| `POST` | `/api/appointments` | Authenticated | Book an available slot |
-| `PUT` | `/api/appointments/:id` | Authenticated | Cancel, reschedule, or update status |
-| `DELETE` | `/api/appointments/:id` | Admin | Remove an appointment |
-| `GET` | `/api/admin/dashboard/stats` | Admin | Load booking analytics |
-| `GET/POST` | `/api/admin/working-hours` | Admin | Read or update opening hours |
-| `GET` | `/api/health` | Public | Check API availability |
+- **Admin**: 
+  - Email: `admin@bookease.com`
+  - Password: `admin123`
 
-## Project structure
+- **Client**: 
+  - Email: `client@example.com`
+  - Password: `client123`
 
-```text
-Book-Ease/
+## Project Structure
+
+```
+smart-job-application-tracker/
 ├── backend/
-│   ├── app.py                  # Application factory and API setup
-│   ├── config.py               # Environment-based configuration
-│   ├── models.py               # SQLAlchemy data model and constraints
-│   ├── routes/                 # Auth, services, bookings, and admin endpoints
-│   ├── utils/booking_logic.py  # Availability and concurrency logic
-│   ├── seed.py                 # Explicit initial data provisioning
-│   └── tests/                  # API test suite
+│   ├── app.py                 # Flask application entry point
+│   ├── config.py              # Configuration settings
+│   ├── models.py              # Database models
+│   ├── seed.py                # Database seeding script
+│   ├── requirements.txt       # Python dependencies
+│   ├── routes/                # API route handlers
+│   │   ├── auth.py           # Authentication routes
+│   │   ├── services.py       # Service CRUD routes
+│   │   ├── appointments.py   # Appointment routes
+│   │   ├── availability.py  # Availability calculation
+│   │   └── admin.py          # Admin routes
+│   └── utils/
+│       └── booking_logic.py  # Booking slot generation logic
+│
 ├── frontend/
-│   ├── src/components/         # Shared interface components
-│   ├── src/contexts/           # Auth, theme, and toast state
-│   ├── src/pages/              # Client and admin views
-│   └── src/services/api.js     # Axios client and auth handling
-├── render.yaml                 # Backend, frontend, and database blueprint
-└── DEPLOY.md                   # Production deployment guide
+│   ├── src/
+│   │   ├── components/       # Reusable components
+│   │   ├── contexts/         # React contexts (Auth, Toast)
+│   │   ├── pages/            # Page components
+│   │   │   └── admin/       # Admin pages
+│   │   ├── services/         # API service layer
+│   │   └── utils/           # Utility functions
+│   ├── package.json         # Frontend dependencies
+│   └── vite.config.js       # Vite configuration
+│
+└── README.md                # This file
 ```
 
-## Security notes
+## Features in Detail
 
-- Public registration always creates a client account; role fields from the request are ignored.
-- Admin credentials are supplied through environment variables and are never committed.
-- Production startup requires both `DATABASE_URL` and `JWT_SECRET_KEY`.
-- JWT sessions expire after a configurable duration.
-- CORS is restricted to configured frontend origins.
-- API responses do not expose database exceptions or tracebacks.
-- Clients can only access their own appointments and can only cancel them; administrative actions are enforced by the backend.
+### Booking System
+- **Slot-based booking**: Generates available time slots based on:
+  - Service duration
+  - Business working hours
+  - Existing appointments
+  - Buffer time between appointments
+- **Prevents double bookings**
+- **Future bookings only** (no past dates)
+- **Cancellation and rescheduling** support
+
+### Service Management
+- Each service includes:
+  - Name and description
+  - Duration (in minutes)
+  - Price
+  - Address (where service is provided)
+  - Image URL (for visual representation)
+
+### Working Hours
+- Set different hours for each day of the week
+- Enable/disable specific days
+- Used for availability calculation
+
+## Security
+
+- Password hashing with Werkzeug
+- JWT-based authentication
+- Role-based access control (Admin/Client)
+- Protected routes on frontend
+- CORS configuration
+- SQL injection prevention with SQLAlchemy ORM
+
+## Responsive Design
+
+The application is fully responsive and optimized for:
+- **Desktop** (1200px+)
+- **Tablet** (768px - 1199px)
+- **Mobile** (320px - 767px)
 
 ## Deployment
 
-The included `render.yaml` provisions a PostgreSQL database, Flask web service, and React static site. See [DEPLOY.md](./DEPLOY.md) for the environment variables and first-time provisioning steps.
+Për udhëzime të detajuara për deploy, shiko [DEPLOY.md](./DEPLOY.md)
+
+### Quick Start me Render.com
+
+1. **Krijo llogari në Render.com** dhe lidh repository-n tënde
+2. **Deploy Database:**
+   - Krijo PostgreSQL database në Render
+   - RUAJ connection string-in
+3. **Deploy Backend:**
+   - Krijo Web Service me Python
+   - Root Directory: `backend`
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2`
+   - Environment Variables:
+     - `DATABASE_URL` = (nga PostgreSQL)
+     - `JWT_SECRET_KEY` = (gjenero me `openssl rand -hex 32`)
+     - `CORS_ORIGINS` = (URL e frontend pas deploy)
+4. **Deploy Frontend:**
+   - Krijo Static Site
+   - Root Directory: `frontend`
+   - Build Command: `npm install && npm run build`
+   - Publish Directory: `frontend/dist`
+   - Environment Variable: `VITE_API_URL` = (URL e backend)
+5. **Seed Database:**
+   - Shko te backend Shell dhe ekzekuto: `cd backend && python seed.py`
+
+Ose përdor `render.yaml` për automated deployment:
+- Render do të lexojë `render.yaml` dhe do të konfigurojë gjithçka automatikisht
+
+Për opsione të tjera (Vercel, Railway, Heroku), shiko [DEPLOY.md](./DEPLOY.md)
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
 ## License
 
-This project is available under the [MIT License](./LICENSE).
+This project is open source and available under the MIT License.
+
+## Author
+
+Built as a portfolio project demonstrating full-stack development skills.
+
+## Support
+
+For issues or questions, please open an issue on the repository.

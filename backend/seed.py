@@ -1,27 +1,32 @@
-import os
 from app import create_app
 from models import db, User, Service, WorkingHours
 from datetime import time
 
-def seed_database(app=None):
-    app = app or create_app()
-    admin_email = os.getenv('ADMIN_EMAIL', 'admin@bookease.com').strip().lower()
-    admin_password = os.getenv('ADMIN_PASSWORD', '')
-
-    if len(admin_password) < 12:
-        raise RuntimeError('ADMIN_PASSWORD must contain at least 12 characters')
+def seed_database():
+    app = create_app()
     
     with app.app_context():
         # Create admin user
-        admin = User.query.filter_by(email=admin_email).first()
+        admin = User.query.filter_by(email='admin@bookease.com').first()
         if not admin:
-            admin = User(email=admin_email, role='admin')
-            admin.set_password(admin_password)
+            admin = User(email='admin@bookease.com', role='admin')
+            admin.set_password('admin123')
             db.session.add(admin)
             db.session.commit()
-            print(f"Created admin user: {admin_email}")
+            print("Created admin user: admin@bookease.com / admin123")
         else:
             print("Admin user already exists")
+        
+        # Create demo client
+        client = User.query.filter_by(email='client@example.com').first()
+        if not client:
+            client = User(email='client@example.com', role='client')
+            client.set_password('client123')
+            db.session.add(client)
+            db.session.commit()
+            print("Created client user: client@example.com / client123")
+        else:
+            print("Client user already exists")
         
         # Create services with addresses and images
         services_data = [
@@ -173,7 +178,9 @@ def seed_database(app=None):
         print("Created working hours")
         
         print("\nDatabase seeding completed!")
-        print(f"\nAdmin account: {admin_email}")
+        print("\nDemo accounts:")
+        print("Admin: admin@bookease.com / admin123")
+        print("Client: client@example.com / client123")
         print(f"\nTotal services available: {len(services_data)}")
 
 if __name__ == '__main__':

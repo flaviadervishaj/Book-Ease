@@ -1,52 +1,59 @@
+from flask import Blueprint, request, jsonify
 from datetime import datetime, timedelta, timezone
-
-from flask import Blueprint, current_app, jsonify, request
-
-from models import Service, db
-from utils.booking_logic import format_time_slot, get_available_slots
-
+from utils.booking_logic import get_available_slots, format_time_slot
 
 availability_bp = Blueprint('availability', __name__)
 
-
 @availability_bp.route('', methods=['GET'])
 def get_availability():
+    """Get available time slots for a service on a specific date"""
     try:
-        service_id = int(request.args.get('service_id', ''))
-    except ValueError:
-        return jsonify({'error': 'service_id must be a valid integer'}), 400
-
-    date_value = request.args.get('date', '')
-    try:
-        booking_date = datetime.strptime(date_value, '%Y-%m-%d').date()
-    except ValueError:
-        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
-
-    today = datetime.now(timezone.utc).date()
-    if booking_date < today or booking_date > today + timedelta(days=90):
-        return jsonify({'error': 'Date must be within the next 90 days'}), 400
-
-    service = db.session.get(Service, service_id)
-    if not service:
-        return jsonify({'error': 'Service not found'}), 404
-
-    try:
-        available_slots = get_available_slots(
-            booking_date,
-            service.duration_minutes,
-        )
+        service_id = request.args.get('service_id')
+        date_str = request.args.get('date')
+        
+        if not service_id:
+            return jsonify({'error': 'service_id is required'}), 400
+        
+        if not date_str:
+            return jsonify({'error': 'date is required'}), 400
+        
+        # Parse date
+        try:
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+        
+        # Get service
+        from models import Service
+        service = Service.query.get(service_id)
+        if not service:
+            return jsonify({'error': 'Service not found'}), 404
+        
+        # Get available slots
+        available_slots = get_available_slots(date, service.duration_minutes)
+        
+        # Format slots - ensure datetime includes timezone info
+        formatted_slots = []
+        for slot in available_slots:
+            # Convert naive datetime to UTC-aware datetime for API response
+            if slot.tzinfo is None:
+                # Assume slot is in UTC (since database stores naive datetime as UTC)
+                slot_utc = slot.replace(tzinfo=timezone.utc)
+            else:
+                slot_utc = slot.astimezone(timezone.utc)
+            
+            formatted_slots.append({
+                'time': format_time_slot(slot),
+                'datetime': slot_utc.isoformat()
+            })
+        
         return jsonify({
-            'date': date_value,
-            'service_id': service_id,
+            'date': date_str,
+            'service_id': int(service_id),
             'service_duration': service.duration_minutes,
-            'available_slots': [
-                {
-                    'time': format_time_slot(slot),
-                    'datetime': f'{slot.isoformat()}Z',
-                }
-                for slot in available_slots
-            ],
-        })
-    except Exception:
-        current_app.logger.exception('Availability lookup failed')
-        return jsonify({'error': 'Unable to load availability'}), 500
+            'available_slots': formatted_slots
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+

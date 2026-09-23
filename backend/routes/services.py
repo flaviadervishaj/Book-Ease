@@ -1,156 +1,166 @@
-from flask import Blueprint, current_app, jsonify, request
-from flask_jwt_extended import get_jwt_identity, jwt_required
-
-from models import Service, User, db
-
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import db, Service
+from datetime import datetime
 
 services_bp = Blueprint('services', __name__)
 
-
-def current_admin():
-    try:
-        user = db.session.get(User, int(get_jwt_identity()))
-    except (TypeError, ValueError):
-        return None
-    return user if user and user.is_admin() else None
-
-
-def validate_service(data, existing=None):
-    name = str(data.get('name', existing.name if existing else '')).strip()
-    if len(name) < 2 or len(name) > 200:
-        raise ValueError('Name must be between 2 and 200 characters')
-
-    duration_value = data.get(
-        'duration_minutes',
-        existing.duration_minutes if existing else None,
-    )
-    try:
-        duration = int(duration_value)
-    except (TypeError, ValueError) as error:
-        raise ValueError('Duration must be a whole number') from error
-    if duration < 5 or duration > 480:
-        raise ValueError('Duration must be between 5 and 480 minutes')
-
-    price_value = data.get('price', existing.price if existing else None)
-    try:
-        price = float(price_value)
-    except (TypeError, ValueError) as error:
-        raise ValueError('Price must be a valid number') from error
-    if price < 0 or price > 1_000_000:
-        raise ValueError('Price must be between 0 and 1,000,000')
-
-    return {
-        'name': name,
-        'description': str(data.get(
-            'description',
-            existing.description if existing else '',
-        ) or '').strip()[:2000],
-        'duration_minutes': duration,
-        'price': price,
-        'address': str(data.get(
-            'address',
-            existing.address if existing else '',
-        ) or '').strip()[:500],
-        'image_url': str(data.get(
-            'image_url',
-            existing.image_url if existing else '',
-        ) or '').strip()[:500],
-    }
-
+def get_current_user():
+    """Helper to get current user from JWT"""
+    identity = get_jwt_identity()
+    from models import User
+    # Identity is now a string (user ID), not a dictionary
+    user_id = int(identity) if isinstance(identity, str) else identity
+    return User.query.get(user_id)
 
 @services_bp.route('', methods=['GET'])
 def get_services():
+    """Get all services (public endpoint)"""
     try:
         services = Service.query.order_by(Service.created_at.desc()).all()
-        return jsonify({'services': [service.to_dict() for service in services]})
-    except Exception:
-        current_app.logger.exception('Unable to list services')
-        return jsonify({'error': 'Unable to load services'}), 500
-
+        return jsonify({
+            'services': [service.to_dict() for service in services]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @services_bp.route('', methods=['POST'])
 @jwt_required()
 def create_service():
-    if not current_admin():
-        return jsonify({'error': 'Admin access required'}), 403
-
-    data = request.get_json(silent=True) or {}
+    """Create a new service (admin only)"""
     try:
-        values = validate_service(data)
-    except ValueError as error:
-        return jsonify({'error': str(error)}), 400
-
-    try:
-        service = Service(**values)
+        user = get_current_user()
+        if not user or not user.is_admin():
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        required_fields = ['name', 'duration_minutes', 'price']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        # Validate duration
+        if not isinstance(data['duration_minutes'], int) or data['duration_minutes'] <= 0:
+            return jsonify({'error': 'duration_minutes must be a positive integer'}), 400
+        
+        # Validate price
+        try:
+            price = float(data['price'])
+            if price < 0:
+                return jsonify({'error': 'price must be non-negative'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'price must be a valid number'}), 400
+        
+        # Create service
+        service = Service(
+            name=data['name'].strip(),
+            description=data.get('description', '').strip(),
+            duration_minutes=data['duration_minutes'],
+            price=price,
+            address=data.get('address', '').strip(),
+            image_url=data.get('image_url', '').strip()
+        )
+        
         db.session.add(service)
         db.session.commit()
+        
         return jsonify({
             'message': 'Service created successfully',
-            'service': service.to_dict(),
+            'service': service.to_dict()
         }), 201
-    except Exception:
+        
+    except Exception as e:
         db.session.rollback()
-        current_app.logger.exception('Service creation failed')
-        return jsonify({'error': 'Unable to create the service'}), 500
-
+        return jsonify({'error': str(e)}), 500
 
 @services_bp.route('/<int:service_id>', methods=['GET'])
 def get_service(service_id):
-    service = db.session.get(Service, service_id)
-    if not service:
-        return jsonify({'error': 'Service not found'}), 404
-    return jsonify({'service': service.to_dict()})
-
+    """Get a specific service"""
+    try:
+        service = Service.query.get(service_id)
+        if not service:
+            return jsonify({'error': 'Service not found'}), 404
+        
+        return jsonify({
+            'service': service.to_dict()
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @services_bp.route('/<int:service_id>', methods=['PUT'])
 @jwt_required()
 def update_service(service_id):
-    if not current_admin():
-        return jsonify({'error': 'Admin access required'}), 403
-
-    service = db.session.get(Service, service_id)
-    if not service:
-        return jsonify({'error': 'Service not found'}), 404
-
-    data = request.get_json(silent=True) or {}
-    if not data:
-        return jsonify({'error': 'Request body is required'}), 400
-
+    """Update a service (admin only)"""
     try:
-        for field, value in validate_service(data, existing=service).items():
-            setattr(service, field, value)
+        user = get_current_user()
+        if not user or not user.is_admin():
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        service = Service.query.get(service_id)
+        if not service:
+            return jsonify({'error': 'Service not found'}), 404
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        # Update fields
+        if 'name' in data:
+            service.name = data['name'].strip()
+        if 'description' in data:
+            service.description = data['description'].strip()
+        if 'duration_minutes' in data:
+            if not isinstance(data['duration_minutes'], int) or data['duration_minutes'] <= 0:
+                return jsonify({'error': 'duration_minutes must be a positive integer'}), 400
+            service.duration_minutes = data['duration_minutes']
+        if 'price' in data:
+            try:
+                price = float(data['price'])
+                if price < 0:
+                    return jsonify({'error': 'price must be non-negative'}), 400
+                service.price = price
+            except (ValueError, TypeError):
+                return jsonify({'error': 'price must be a valid number'}), 400
+        if 'address' in data:
+            service.address = data['address'].strip()
+        if 'image_url' in data:
+            service.image_url = data['image_url'].strip()
+        
         db.session.commit()
+        
         return jsonify({
             'message': 'Service updated successfully',
-            'service': service.to_dict(),
-        })
-    except ValueError as error:
-        return jsonify({'error': str(error)}), 400
-    except Exception:
+            'service': service.to_dict()
+        }), 200
+        
+    except Exception as e:
         db.session.rollback()
-        current_app.logger.exception('Service update failed')
-        return jsonify({'error': 'Unable to update the service'}), 500
-
+        return jsonify({'error': str(e)}), 500
 
 @services_bp.route('/<int:service_id>', methods=['DELETE'])
 @jwt_required()
 def delete_service(service_id):
-    if not current_admin():
-        return jsonify({'error': 'Admin access required'}), 403
-
-    service = db.session.get(Service, service_id)
-    if not service:
-        return jsonify({'error': 'Service not found'}), 404
-    if service.appointments:
-        return jsonify({
-            'error': 'Services with appointment history cannot be deleted',
-        }), 409
-
+    """Delete a service (admin only)"""
     try:
+        user = get_current_user()
+        if not user or not user.is_admin():
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        service = Service.query.get(service_id)
+        if not service:
+            return jsonify({'error': 'Service not found'}), 404
+        
         db.session.delete(service)
         db.session.commit()
-        return jsonify({'message': 'Service deleted successfully'})
-    except Exception:
+        
+        return jsonify({
+            'message': 'Service deleted successfully'
+        }), 200
+        
+    except Exception as e:
         db.session.rollback()
-        current_app.logger.exception('Service deletion failed')
-        return jsonify({'error': 'Unable to delete the service'}), 500
+        return jsonify({'error': str(e)}), 500

@@ -6,22 +6,15 @@ services:
     plan: free
     buildCommand: pip install -r backend/requirements.txt
     startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
-    healthCheckPath: /api/health
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: bookease-db
-          property: connectionString
+        sync: false
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
         value: https://bookease-frontend.onrender.com
       - key: FLASK_ENV
         value: production
-      - key: ADMIN_EMAIL
-        value: admin@bookease.com
-      - key: ADMIN_PASSWORD
-        sync: false
       - key: PYTHON_VERSION
         value: 3.11.0
 
@@ -44,3 +37,4 @@ databases:
     plan: free
     databaseName: bookease_db
     user: bookease_user
+

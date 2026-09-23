@@ -42,14 +42,14 @@ const Register = () => {
       return
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters')
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
       return
     }
 
     setLoading(true)
 
-    const result = await register(email.trim(), password)
+    const result = await register(email.trim(), password, 'client')
     
     if (result.success) {
       navigate('/services')
@@ -120,9 +120,9 @@ const Register = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="Create a password (min. 8 characters)"
+                  placeholder="Create a password (min. 6 characters)"
                   className="auth-input"
-                  minLength={8}
+                  minLength={6}
                 />
               </div>
             </div>
@@ -138,7 +138,7 @@ const Register = () => {
                   required
                   placeholder="Confirm your password"
                   className="auth-input"
-                  minLength={8}
+                  minLength={6}
                 />
               </div>
             </div>

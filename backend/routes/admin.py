@@ -1,133 +1,191 @@
-from datetime import datetime, timedelta, timezone
-
-from flask import Blueprint, current_app, jsonify, request
-from flask_jwt_extended import get_jwt_identity, jwt_required
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import db, WorkingHours, Appointment, Service, User
+from datetime import datetime, timedelta
 from sqlalchemy import func
-
-from models import Appointment, Service, User, WorkingHours, db
-
 
 admin_bp = Blueprint('admin', __name__)
 
+def get_current_user():
+    """Helper to get current user from JWT"""
+    identity = get_jwt_identity()
+    from models import User
+    # Identity is now a string (user ID), not a dictionary
+    user_id = int(identity) if isinstance(identity, str) else identity
+    return User.query.get(user_id)
 
-def current_admin():
-    try:
-        user = db.session.get(User, int(get_jwt_identity()))
-    except (TypeError, ValueError):
+def require_admin():
+    """Decorator helper to require admin access"""
+    user = get_current_user()
+    if not user or not user.is_admin():
         return None
-    return user if user and user.is_admin() else None
-
+    return user
 
 @admin_bp.route('/dashboard/stats', methods=['GET'])
 @jwt_required()
 def get_dashboard_stats():
-    if not current_admin():
-        return jsonify({'error': 'Admin access required'}), 403
-
+    """Get dashboard statistics (admin only)"""
     try:
-        status_rows = db.session.query(
+        admin = require_admin()
+        if not admin:
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        # Total bookings
+        total_bookings = Appointment.query.count()
+        
+        # Bookings by status
+        bookings_by_status = db.session.query(
             Appointment.status,
-            func.count(Appointment.id),
+            func.count(Appointment.id)
         ).group_by(Appointment.status).all()
-
-        seven_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
-        daily_rows = db.session.query(
+        
+        status_counts = {status: count for status, count in bookings_by_status}
+        
+        # Bookings per day (last 7 days)
+        seven_days_ago = datetime.now() - timedelta(days=7)
+        bookings_per_day = db.session.query(
             func.date(Appointment.start_time).label('date'),
-            func.count(Appointment.id).label('count'),
+            func.count(Appointment.id).label('count')
         ).filter(
-            Appointment.start_time >= seven_days_ago,
-        ).group_by(
-            func.date(Appointment.start_time),
-        ).order_by(
-            func.date(Appointment.start_time),
-        ).all()
-
+            Appointment.start_time >= seven_days_ago
+        ).group_by(func.date(Appointment.start_time)).all()
+        
+        bookings_per_day_data = [
+            {'date': str(date), 'count': count}
+            for date, count in bookings_per_day
+        ]
+        
+        # Most popular service
         popular_service = db.session.query(
             Service.name,
-            func.count(Appointment.id).label('count'),
+            func.count(Appointment.id).label('count')
         ).join(
-            Appointment,
-            Service.id == Appointment.service_id,
-        ).group_by(
-            Service.id,
-            Service.name,
-        ).order_by(
-            func.count(Appointment.id).desc(),
+            Appointment, Service.id == Appointment.service_id
+        ).group_by(Service.id, Service.name).order_by(
+            func.count(Appointment.id).desc()
         ).first()
-
+        
+        popular_service_data = None
+        if popular_service:
+            popular_service_data = {
+                'name': popular_service[0],
+                'count': popular_service[1]
+            }
+        
         return jsonify({
-            'total_bookings': Appointment.query.count(),
-            'bookings_by_status': dict(status_rows),
-            'bookings_per_day': [
-                {'date': str(date), 'count': count}
-                for date, count in daily_rows
-            ],
-            'popular_service': (
-                {'name': popular_service[0], 'count': popular_service[1]}
-                if popular_service else None
-            ),
-        })
-    except Exception:
-        current_app.logger.exception('Dashboard statistics failed')
-        return jsonify({'error': 'Unable to load dashboard statistics'}), 500
-
+            'total_bookings': total_bookings,
+            'bookings_by_status': status_counts,
+            'bookings_per_day': bookings_per_day_data,
+            'popular_service': popular_service_data
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/working-hours', methods=['GET'])
 @jwt_required()
 def get_working_hours():
-    if not current_admin():
-        return jsonify({'error': 'Admin access required'}), 403
-
+    """Get working hours (admin only)"""
     try:
+        admin = require_admin()
+        if not admin:
+            return jsonify({'error': 'Admin access required'}), 403
+        
         working_hours = WorkingHours.query.order_by(WorkingHours.day_of_week).all()
+        
         return jsonify({
-            'working_hours': [hours.to_dict() for hours in working_hours],
-        })
-    except Exception:
-        current_app.logger.exception('Working hours lookup failed')
-        return jsonify({'error': 'Unable to load working hours'}), 500
-
+            'working_hours': [wh.to_dict() for wh in working_hours]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/working-hours', methods=['POST'])
 @jwt_required()
-def save_working_hours():
-    if not current_admin():
-        return jsonify({'error': 'Admin access required'}), 403
-
-    data = request.get_json(silent=True) or {}
+def create_working_hours():
+    """Create or update working hours (admin only)"""
     try:
-        day_of_week = int(data.get('day_of_week'))
-        start_time = datetime.strptime(str(data.get('start_time')), '%H:%M').time()
-        end_time = datetime.strptime(str(data.get('end_time')), '%H:%M').time()
-    except (TypeError, ValueError):
-        return jsonify({
-            'error': 'day_of_week and HH:MM start/end times are required',
-        }), 400
-
-    if day_of_week < 0 or day_of_week > 6:
-        return jsonify({'error': 'day_of_week must be between 0 and 6'}), 400
-    if start_time >= end_time:
-        return jsonify({'error': 'start_time must be before end_time'}), 400
-
-    is_available = data.get('is_available', True)
-    if not isinstance(is_available, bool):
-        return jsonify({'error': 'is_available must be a boolean'}), 400
-
-    try:
-        working_hours = WorkingHours.query.filter_by(day_of_week=day_of_week).first()
-        if not working_hours:
-            working_hours = WorkingHours(day_of_week=day_of_week)
+        admin = require_admin()
+        if not admin:
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Request body is required'}), 400
+        
+        required_fields = ['day_of_week', 'start_time', 'end_time']
+        for field in required_fields:
+            if data.get(field) is None:
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        day_of_week = data['day_of_week']
+        if day_of_week < 0 or day_of_week > 6:
+            return jsonify({'error': 'day_of_week must be between 0 and 6'}), 400
+        
+        # Parse times
+        try:
+            start_time = datetime.strptime(data['start_time'], '%H:%M').time()
+            end_time = datetime.strptime(data['end_time'], '%H:%M').time()
+        except ValueError:
+            return jsonify({'error': 'Invalid time format. Use HH:MM'}), 400
+        
+        if start_time >= end_time:
+            return jsonify({'error': 'start_time must be before end_time'}), 400
+        
+        # Check if working hours already exist for this day
+        existing = WorkingHours.query.filter_by(day_of_week=day_of_week).first()
+        
+        if existing:
+            # Update existing
+            existing.start_time = start_time
+            existing.end_time = end_time
+            existing.is_available = data.get('is_available', True)
+        else:
+            # Create new
+            working_hours = WorkingHours(
+                day_of_week=day_of_week,
+                start_time=start_time,
+                end_time=end_time,
+                is_available=data.get('is_available', True)
+            )
             db.session.add(working_hours)
-
-        working_hours.start_time = start_time
-        working_hours.end_time = end_time
-        working_hours.is_available = is_available
+        
         db.session.commit()
+        
         return jsonify({
-            'message': 'Working hours saved successfully',
-            'working_hours': working_hours.to_dict(),
-        })
-    except Exception:
+            'message': 'Working hours saved successfully'
+        }), 200
+        
+    except Exception as e:
         db.session.rollback()
-        current_app.logger.exception('Working hours update failed')
-        return jsonify({'error': 'Unable to save working hours'}), 500
+        return jsonify({'error': str(e)}), 500
+
+@admin_bp.route('/seed', methods=['POST'])
+def seed_database():
+    """Seed database with demo data (only if database is empty)"""
+    try:
+        # Check if database already has data
+        user_count = User.query.count()
+        service_count = Service.query.count()
+        
+        if user_count > 0 and service_count > 0:
+            return jsonify({
+                'message': 'Database already contains data. Seeding skipped.',
+                'users': user_count,
+                'services': service_count
+            }), 200
+        
+        # Import and run seed function
+        from seed import seed_database as run_seed
+        run_seed()
+        
+        return jsonify({
+            'message': 'Database seeded successfully!',
+            'users': User.query.count(),
+            'services': Service.query.count()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
