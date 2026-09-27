@@ -29,7 +29,7 @@ const Book = () => {
   useEffect(() => {
     fetchServices()
     const serviceId = searchParams.get('service')
-    if (serviceId) {
+    if (serviceId && !rescheduleId) {
       setSelectedService(serviceId)
     }
   }, [])
@@ -72,7 +72,7 @@ const Book = () => {
       setServices(response.data.services)
       
       const serviceId = searchParams.get('service')
-      if (serviceId && response.data.services.length > 0) {
+      if (serviceId && !rescheduleId && response.data.services.length > 0) {
         const service = response.data.services.find(s => s.id === parseInt(serviceId))
         if (service) {
           setSelectedService(service.id.toString())

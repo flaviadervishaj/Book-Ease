@@ -9,6 +9,7 @@ const Services = () => {
   const [services, setServices] = useState([])
   const [filteredServices, setFilteredServices] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [priceRange, setPriceRange] = useState([0, 1000])
@@ -23,15 +24,19 @@ const Services = () => {
   }, [services, searchQuery, sortBy, priceRange])
 
   const fetchServices = async () => {
+    setLoading(true)
+    setLoadError(false)
     try {
       const response = await api.get('/services')
-      setServices(response.data.services)
-      if (response.data.services.length > 0) {
-        const maxPrice = Math.max(...response.data.services.map(s => s.price))
+      const items = response.data.services || []
+      setServices(items)
+      if (items.length > 0) {
+        const maxPrice = Math.max(...items.map(s => s.price))
         setPriceRange([0, Math.ceil(maxPrice)])
       }
-      setLoading(false)
     } catch (error) {
+      setLoadError(true)
+    } finally {
       setLoading(false)
     }
   }
@@ -146,7 +151,13 @@ const Services = () => {
         </div>
       </div>
 
-      {filteredServices.length === 0 ? (
+      {loadError ? (
+        <div className="empty-state" role="alert">
+          <h3>Services could not be loaded</h3>
+          <p>Please try again in a moment.</p>
+          <button onClick={fetchServices} className="btn btn-primary">Try Again</button>
+        </div>
+      ) : filteredServices.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <SearchIcon />
