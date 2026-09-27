@@ -101,9 +101,6 @@ const Book = () => {
       })
       setAvailableSlots(response.data.available_slots || [])
       setBookingTimezone(response.data.timezone || 'Europe/Tirane')
-      if (response.data.available_slots && response.data.available_slots.length === 0) {
-        setError('No available time slots for this date. Please try another date.')
-      }
     } catch (error) {
       let errorMsg = 'Failed to load available time slots'
       if (error.response) {
@@ -196,6 +193,9 @@ const Book = () => {
   const maxDate = new Date()
   maxDate.setDate(maxDate.getDate() + 30)
   const maxDateStr = localDate(maxDate)
+  const nextDate = selectedDate ? new Date(`${selectedDate}T12:00:00`) : null
+  nextDate?.setDate(nextDate.getDate() + 1)
+  const nextDateStr = nextDate ? localDate(nextDate) : ''
 
   const selectedServiceData = services.find(s => s.id === parseInt(selectedService))
 
@@ -297,30 +297,26 @@ const Book = () => {
                 <span className="step-number">3</span>
                 <h3>Select Time</h3>
               </div>
-              {error && !loadingSlots && (
-                <div className="error-message" style={{ marginBottom: '16px', padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(255, 0, 0, 0.1)', border: '1px solid rgba(255, 0, 0, 0.3)', color: '#ff6b6b' }}>
-                  {error}
-                </div>
-              )}
               {loadingSlots ? (
                 <div className="loading">Loading available slots...</div>
+              ) : error ? (
+                <div className="error-message" role="alert">{error}</div>
               ) : availableSlots.length === 0 ? (
                 <div className="no-slots">
                   <div className="no-slots-icon">
                     <CalendarIcon />
                   </div>
-                  <p><strong>No available time slots for this date.</strong></p>
-                  <p className="hint">Try selecting a different date or check back later.</p>
-                  <button
-                    onClick={() => {
-                      setSelectedDate('')
-                      setError('')
-                    }}
-                    className="btn btn-secondary"
-                    style={{ marginTop: '12px' }}
-                  >
-                    Change Date
-                  </button>
+                  <p><strong>No times available on this date</strong></p>
+                  <p className="hint">Choose another day to see its available times.</p>
+                  {nextDateStr <= maxDateStr && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate(nextDateStr)}
+                      className="btn btn-secondary"
+                    >
+                      Check next day
+                    </button>
+                  )}
                 </div>
               ) : (
                 <>
@@ -402,11 +398,6 @@ const Book = () => {
           </div>
         )}
 
-        {error && !loadingSlots && (
-          <div className="error-message" style={{ marginTop: '16px', padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(255, 0, 0, 0.1)', border: '1px solid rgba(255, 0, 0, 0.3)', color: '#ff6b6b' }}>
-            {error}
-          </div>
-        )}
       </div>
 
       <ConfirmationDialog

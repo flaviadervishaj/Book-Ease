@@ -253,6 +253,10 @@
   margin-top: var(--spacing-sm);
 }
 
+.no-slots .btn {
+  margin-top: var(--spacing-md);
+}
+
 .booking-summary {
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
@@ -415,13 +419,14 @@
   }
 
   .time-slots {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--spacing-sm);
   }
 
   .time-slot-btn {
-    padding: 10px 12px;
-    font-size: 13px;
+    min-height: 44px;
+    padding: 10px 6px;
+    font-size: 14px;
   }
 
   .confirm-booking-btn {
@@ -510,12 +515,12 @@
   }
 
   .time-slots {
-    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .time-slot-btn {
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: 10px;
+    font-size: 14px;
   }
 
   .booking-summary {
