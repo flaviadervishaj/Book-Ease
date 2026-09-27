@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime, timedelta, timezone
 from utils.booking_logic import get_available_slots, format_time_slot
 
@@ -49,6 +49,7 @@ def get_availability():
         
         return jsonify({
             'date': date_str,
+            'timezone': current_app.config['BOOKING_TIMEZONE'],
             'service_id': int(service_id),
             'service_duration': service.duration_minutes,
             'available_slots': formatted_slots
@@ -56,4 +57,3 @@ def get_availability():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-

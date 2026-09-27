@@ -5,7 +5,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+    startCommand: cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -15,6 +15,8 @@ services:
         value: https://bookease-frontend.onrender.com
       - key: FLASK_ENV
         value: production
+      - key: BOOKING_TIMEZONE
+        value: Europe/Tirane
       - key: PYTHON_VERSION
         value: 3.11.0
 
@@ -37,4 +39,3 @@ databases:
     plan: free
     databaseName: bookease_db
     user: bookease_user
-

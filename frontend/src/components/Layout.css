@@ -337,6 +337,17 @@
   border-color: var(--accent-color);
 }
 
+.mobile-menu-signout {
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
 /* Overlay when menu is open */
 .mobile-menu::before {
   content: '';

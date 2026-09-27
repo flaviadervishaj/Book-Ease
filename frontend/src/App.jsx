@@ -27,16 +27,12 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route
               path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
+              element={<Layout />}
             >
               <Route index element={<Navigate to="/services" replace />} />
               <Route path="services" element={<Services />} />
-              <Route path="book" element={<Book />} />
-              <Route path="my-appointments" element={<MyAppointments />} />
+              <Route path="book" element={<ProtectedRoute><Book /></ProtectedRoute>} />
+              <Route path="my-appointments" element={<ProtectedRoute><MyAppointments /></ProtectedRoute>} />
               <Route
                 path="admin/dashboard"
                 element={

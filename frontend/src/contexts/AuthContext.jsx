@@ -17,18 +17,22 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
-    
-    if (token && userData) {
-      try {
-        setUser(JSON.parse(userData))
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      } catch (error) {
+    if (!token) {
+      setLoading(false)
+      return
+    }
+    api.get('/auth/me')
+      .then(({ data }) => {
+        setUser(data.user)
+        localStorage.setItem('user', JSON.stringify(data.user))
+      })
+      .catch(() => {
         localStorage.removeItem('token')
         localStorage.removeItem('user')
-      }
-    }
-    setLoading(false)
+        delete api.defaults.headers.common['Authorization']
+        setUser(null)
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const login = async (email, password) => {
@@ -65,9 +69,9 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
-  const register = async (email, password, role = 'client') => {
+  const register = async (email, password) => {
     try {
-      const response = await api.post('/auth/register', { email, password, role })
+      const response = await api.post('/auth/register', { email, password })
       const { access_token, user } = response.data
       
       localStorage.setItem('token', access_token)

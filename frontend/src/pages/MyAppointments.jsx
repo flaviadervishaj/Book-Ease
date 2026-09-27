@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useToast } from '../contexts/ToastContext'
 import ConfirmationDialog from '../components/ConfirmationDialog'
-import { formatDate, getRelativeTime } from '../utils/dateUtils'
+import { getRelativeTime } from '../utils/dateUtils'
+import { formatPrice } from '../utils/formatPrice'
 import { CalendarIcon, ClockIcon } from '../components/Icons'
 import './MyAppointments.css'
 
@@ -13,23 +14,20 @@ const MyAppointments = () => {
   const [statusFilter, setStatusFilter] = useState('all')
   const [error, setError] = useState('')
   const [cancelDialog, setCancelDialog] = useState({ isOpen: false, appointmentId: null })
-  const [rescheduleDialog, setRescheduleDialog] = useState({ isOpen: false, appointment: null })
   const toast = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
+  const confirmation = location.state?.confirmation
 
   useEffect(() => {
     fetchAppointments()
-  }, [statusFilter])
+  }, [])
 
   const fetchAppointments = async () => {
     setLoading(true)
     setError('')
     try {
-      const params = {}
-      if (statusFilter !== 'all') {
-        params.status = statusFilter
-      }
-      const response = await api.get('/appointments', { params })
+      const response = await api.get('/appointments')
       setAppointments(response.data.appointments || [])
       setLoading(false)
     } catch (error) {
@@ -69,22 +67,6 @@ const MyAppointments = () => {
     }
   }
 
-  const handleReschedule = async (newStartTime) => {
-    if (!rescheduleDialog.appointment) return
-
-    try {
-      await api.put(`/appointments/${rescheduleDialog.appointment.id}`, {
-        start_time: newStartTime
-      })
-      toast.success('Appointment rescheduled successfully')
-      setRescheduleDialog({ isOpen: false, appointment: null })
-      fetchAppointments()
-    } catch (error) {
-      const errorMsg = error.response?.data?.error || 'Failed to reschedule appointment'
-      toast.error(errorMsg)
-    }
-  }
-
   const formatDateTime = (dateString) => {
     const date = new Date(dateString)
     return date.toLocaleString('en-US', {
@@ -108,6 +90,9 @@ const MyAppointments = () => {
   }
 
   const statusCounts = getStatusCounts()
+  const visibleAppointments = statusFilter === 'all'
+    ? appointments
+    : appointments.filter(appointment => appointment.status === statusFilter)
 
   if (loading) {
     return <div className="loading">Loading appointments...</div>
@@ -127,6 +112,34 @@ const MyAppointments = () => {
           + Book New Appointment
         </button>
       </div>
+
+      {confirmation && (
+        <section className="booking-confirmation" aria-labelledby="booking-confirmation-title" role="status">
+          <div className="confirmation-heading">
+            <div>
+              <span className="confirmation-label">Booking #{confirmation.id}</span>
+              <h2 id="booking-confirmation-title">
+                Appointment {confirmation.action === 'rescheduled' ? 'rescheduled' : 'confirmed'}
+              </h2>
+            </div>
+            <button
+              type="button"
+              className="confirmation-dismiss"
+              aria-label="Dismiss confirmation"
+              onClick={() => navigate(location.pathname, { replace: true })}
+            >
+              Close
+            </button>
+          </div>
+          <dl className="confirmation-details">
+            <div><dt>Service</dt><dd>{confirmation.service}</dd></div>
+            <div><dt>Date</dt><dd>{new Date(`${confirmation.date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</dd></div>
+            <div><dt>Time</dt><dd>{confirmation.time} · {confirmation.timezone}</dd></div>
+            <div><dt>Price</dt><dd>{formatPrice(confirmation.price)}</dd></div>
+          </dl>
+          <p>You can manage this appointment below.</p>
+        </section>
+      )}
 
       <div className="status-filters">
         <button
@@ -157,7 +170,7 @@ const MyAppointments = () => {
 
       {error && <div className="error-message">{error}</div>}
 
-      {appointments.length === 0 ? (
+      {visibleAppointments.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <CalendarIcon />
@@ -179,7 +192,7 @@ const MyAppointments = () => {
         </div>
       ) : (
         <div className="appointments-list">
-          {appointments.map((appointment) => {
+          {visibleAppointments.map((appointment) => {
             const isPast = new Date(appointment.start_time) < new Date()
             const isToday = new Date(appointment.start_time).toDateString() === new Date().toDateString()
             

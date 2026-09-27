@@ -34,29 +34,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status
-    const url = error.config?.url || ''
     const errorData = error.response?.data || {}
-    
-    // NEVER logout on booking/appointments endpoints - these are user actions
-    // Only logout on actual authentication failures (expired/invalid token)
-    const isBookingEndpoint = url.includes('/appointments') || url.includes('/availability')
-    
-    if (status === 401) {
-      // Check if error is actually authentication-related
-      const errorMsg = errorData?.error || ''
-      const isAuthError = errorData?.code === 'TOKEN_EXPIRED' || 
-                         errorData?.code === 'INVALID_TOKEN' || 
-                         errorData?.code === 'MISSING_TOKEN' ||
-                         errorMsg.toLowerCase().includes('token') ||
-                         errorMsg.toLowerCase().includes('unauthorized') ||
-                         errorMsg.toLowerCase().includes('authorization')
-      
-      // Don't logout if it's a booking endpoint - just show error
-      if (isAuthError && !isBookingEndpoint && !window.location.pathname.includes('/login')) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        delete api.defaults.headers.common['Authorization']
-        window.location.href = '/login'
+
+    if (status === 401 && ['TOKEN_EXPIRED', 'INVALID_TOKEN', 'MISSING_TOKEN', 'TOKEN_REVOKED'].includes(errorData.code)) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      delete api.defaults.headers.common['Authorization']
+      if (!['/login', '/register', '/services', '/'].includes(window.location.pathname)) {
+        const next = encodeURIComponent(window.location.pathname + window.location.search)
+        window.location.href = `/login?next=${next}`
       }
     }
     

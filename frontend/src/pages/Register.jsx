@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import Logo from '../components/Logo'
@@ -15,10 +15,13 @@ const Register = () => {
   const { register, user } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const next = searchParams.get('next')
+  const destination = next?.startsWith('/') && !next.startsWith('//') ? next : '/services'
 
   useEffect(() => {
     if (user) {
-      navigate('/services')
+      navigate(destination)
     }
   }, [user, navigate])
 
@@ -49,10 +52,10 @@ const Register = () => {
 
     setLoading(true)
 
-    const result = await register(email.trim(), password, 'client')
+    const result = await register(email.trim(), password)
     
     if (result.success) {
-      navigate('/services')
+      navigate(destination)
     } else {
       setError(result.error || 'Registration failed. Please try again.')
     }
@@ -162,7 +165,7 @@ const Register = () => {
           <div className="auth-footer">
             <p>
               Already have an account?{' '}
-              <Link to="/login" className="auth-link">Sign in here</Link>
+              <Link to={`/login${next ? `?next=${encodeURIComponent(destination)}` : ''}`} className="auth-link">Sign in here</Link>
             </p>
           </div>
         </div>

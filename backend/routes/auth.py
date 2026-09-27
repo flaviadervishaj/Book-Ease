@@ -1,24 +1,31 @@
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from models import db, User
-from datetime import datetime
+from sqlalchemy.exc import IntegrityError
 
 auth_bp = Blueprint('auth', __name__)
+
+
+@auth_bp.route('/me', methods=['GET'])
+@jwt_required()
+def current_user():
+    user = db.session.get(User, int(get_jwt_identity()))
+    if not user:
+        return jsonify({'error': 'User not found'}), 401
+    return jsonify({'user': user.to_dict()})
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
     try:
         data = request.get_json()
         
-        if not data or not data.get('email') or not data.get('password'):
+        if not data or not isinstance(data.get('email'), str) or not isinstance(data.get('password'), str):
             return jsonify({'error': 'Email and password are required'}), 400
         
         email = data['email'].strip().lower()
         password = data['password']
-        role = data.get('role', 'client').lower()
-        
-        if role not in ['client', 'admin']:
-            return jsonify({'error': 'Invalid role. Must be "client" or "admin"'}), 400
+        # Public registration must never grant administrative access.
+        role = 'client'
         
         if User.query.filter_by(email=email).first():
             return jsonify({'error': 'Email already registered'}), 400
@@ -45,32 +52,20 @@ def register():
             'user': user.to_dict()
         }), 201
         
-    except Exception as e:
+    except IntegrityError:
         db.session.rollback()
-        import traceback
-        error_details = str(e)
-        print(f"Registration error: {error_details}")
-        print(traceback.format_exc())
-        
-        # Check for specific database errors
-        if 'UNIQUE constraint' in error_details or 'duplicate' in error_details.lower():
-            return jsonify({'error': 'Email already registered'}), 400
-        elif 'OperationalError' in str(type(e)) or 'connection' in error_details.lower():
-            return jsonify({'error': 'Database connection error. Please try again later.'}), 500
-        elif 'IntegrityError' in str(type(e)):
-            return jsonify({'error': 'Email already registered'}), 400
-        
-        return jsonify({
-            'error': f'Registration failed: {error_details}',
-            'details': str(e) if current_app.config.get('DEBUG', False) else None
-        }), 500
+        return jsonify({'error': 'Email already registered'}), 400
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception('Registration failed')
+        return jsonify({'error': 'Registration failed. Please try again later.'}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
         
-        if not data or not data.get('email') or not data.get('password'):
+        if not data or not isinstance(data.get('email'), str) or not isinstance(data.get('password'), str):
             return jsonify({'error': 'Email and password are required'}), 400
         
         email = data['email'].strip().lower()
@@ -94,5 +89,6 @@ def login():
             'user': user.to_dict()
         }), 200
         
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        current_app.logger.exception('Login failed')
+        return jsonify({'error': 'Login failed. Please try again later.'}), 500

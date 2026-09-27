@@ -1,33 +1,21 @@
-from app import create_app
-from models import db, User, Service, WorkingHours
+from flask import current_app
+from models import db, Service, WorkingHours
 from datetime import time
 
+OLD_DEMO_ADDRESS = '123 Main Street, Downtown District, Floor 2, Suite 201'
+DEMO_ADDRESS = 'Tirana, Albania · Demo location'
+
+
+def update_demo_addresses():
+    """Replace the original placeholder only; leave custom service locations alone."""
+    updated = Service.query.filter_by(address=OLD_DEMO_ADDRESS).update(
+        {'address': DEMO_ADDRESS}, synchronize_session=False
+    )
+    if updated:
+        db.session.commit()
+
 def seed_database():
-    app = create_app()
-    
-    with app.app_context():
-        # Create admin user
-        admin = User.query.filter_by(email='admin@bookease.com').first()
-        if not admin:
-            admin = User(email='admin@bookease.com', role='admin')
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print("Created admin user: admin@bookease.com / admin123")
-        else:
-            print("Admin user already exists")
-        
-        # Create demo client
-        client = User.query.filter_by(email='client@example.com').first()
-        if not client:
-            client = User(email='client@example.com', role='client')
-            client.set_password('client123')
-            db.session.add(client)
-            db.session.commit()
-            print("Created client user: client@example.com / client123")
-        else:
-            print("Client user already exists")
-        
+    with current_app.app_context():
         # Create services with addresses and images
         services_data = [
             {
@@ -35,7 +23,7 @@ def seed_database():
                 'description': 'Professional haircut service with modern styling techniques',
                 'duration_minutes': 30,
                 'price': 25.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1562322140-8baeececf3df?w=800&h=600&fit=crop'
             },
             {
@@ -43,7 +31,7 @@ def seed_database():
                 'description': 'Complete haircut with professional styling and finishing',
                 'duration_minutes': 45,
                 'price': 40.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&h=600&fit=crop'
             },
             {
@@ -51,7 +39,7 @@ def seed_database():
                 'description': 'Professional beard trimming and shaping service',
                 'duration_minutes': 20,
                 'price': 15.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&h=600&fit=crop'
             },
             {
@@ -59,7 +47,7 @@ def seed_database():
                 'description': 'Complete package: Haircut, styling, and beard trim',
                 'duration_minutes': 60,
                 'price': 50.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1560869713-e9b8b3e8c0c5?w=800&h=600&fit=crop'
             },
             {
@@ -67,7 +55,7 @@ def seed_database():
                 'description': 'Professional hair coloring service with premium products',
                 'duration_minutes': 90,
                 'price': 75.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=800&h=600&fit=crop'
             },
             {
@@ -75,7 +63,7 @@ def seed_database():
                 'description': 'Relaxing hair wash with professional styling',
                 'duration_minutes': 25,
                 'price': 20.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?w=800&h=600&fit=crop'
             },
             {
@@ -83,7 +71,7 @@ def seed_database():
                 'description': 'Special haircut service for children',
                 'duration_minutes': 20,
                 'price': 18.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&h=600&fit=crop'
             },
             {
@@ -91,7 +79,7 @@ def seed_database():
                 'description': 'Deep conditioning and hair treatment service',
                 'duration_minutes': 45,
                 'price': 35.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&h=600&fit=crop'
             },
             {
@@ -99,7 +87,7 @@ def seed_database():
                 'description': 'Free consultation about your hair care needs',
                 'duration_minutes': 15,
                 'price': 0.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1559599101-f09722fb4948?w=800&h=600&fit=crop'
             },
             {
@@ -107,7 +95,7 @@ def seed_database():
                 'description': 'Complete wedding day hair and styling package',
                 'duration_minutes': 120,
                 'price': 150.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1519741497674-611481863552?w=800&h=600&fit=crop'
             },
             {
@@ -115,7 +103,7 @@ def seed_database():
                 'description': 'Professional hair extensions installation',
                 'duration_minutes': 180,
                 'price': 200.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=800&h=600&fit=crop'
             },
             {
@@ -123,7 +111,7 @@ def seed_database():
                 'description': 'Professional hair perming service',
                 'duration_minutes': 120,
                 'price': 85.00,
-                'address': '123 Main Street, Downtown District, Floor 2, Suite 201',
+                'address': DEMO_ADDRESS,
                 'image_url': 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800&h=600&fit=crop'
             }
         ]
@@ -178,10 +166,9 @@ def seed_database():
         print("Created working hours")
         
         print("\nDatabase seeding completed!")
-        print("\nDemo accounts:")
-        print("Admin: admin@bookease.com / admin123")
-        print("Client: client@example.com / client123")
         print(f"\nTotal services available: {len(services_data)}")
 
 if __name__ == '__main__':
-    seed_database()
+    from app import app
+    with app.app_context():
+        seed_database()

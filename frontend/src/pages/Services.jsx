@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { CardSkeleton } from '../components/LoadingSkeleton'
 import { SearchIcon, ClockIcon, MoneyIcon, StatsIcon, LocationIcon } from '../components/Icons'
+import { formatPrice } from '../utils/formatPrice'
 import './Services.css'
 
 const Services = () => {
   const [services, setServices] = useState([])
   const [filteredServices, setFilteredServices] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [priceRange, setPriceRange] = useState([0, 1000])
@@ -23,15 +25,19 @@ const Services = () => {
   }, [services, searchQuery, sortBy, priceRange])
 
   const fetchServices = async () => {
+    setLoading(true)
+    setLoadError(false)
     try {
       const response = await api.get('/services')
-      setServices(response.data.services)
-      if (response.data.services.length > 0) {
-        const maxPrice = Math.max(...response.data.services.map(s => s.price))
+      const items = response.data.services || []
+      setServices(items)
+      if (items.length > 0) {
+        const maxPrice = Math.max(...items.map(s => s.price))
         setPriceRange([0, Math.ceil(maxPrice)])
       }
-      setLoading(false)
     } catch (error) {
+      setLoadError(true)
+    } finally {
       setLoading(false)
     }
   }
@@ -131,7 +137,7 @@ const Services = () => {
           </div>
 
           <div className="price-filter">
-            <label>Price Range: ${priceRange[0]} - ${priceRange[1]}</label>
+            <label>Price Range: {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}</label>
             <div className="price-slider-container">
               <input
                 type="range"
@@ -146,7 +152,13 @@ const Services = () => {
         </div>
       </div>
 
-      {filteredServices.length === 0 ? (
+      {loadError ? (
+        <div className="empty-state" role="alert">
+          <h3>Services could not be loaded</h3>
+          <p>Please try again in a moment.</p>
+          <button onClick={fetchServices} className="btn btn-primary">Try Again</button>
+        </div>
+      ) : filteredServices.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">
             <SearchIcon />
@@ -204,7 +216,7 @@ const Services = () => {
                   <div className="service-content">
                     <div className="service-header">
                       <h3>{service.name}</h3>
-                      <div className="service-price">${service.price}</div>
+                      <div className="service-price">{formatPrice(service.price)}</div>
                     </div>
                     
                     {service.description && (
@@ -226,7 +238,7 @@ const Services = () => {
                       <div className="detail-item">
                         <MoneyIcon />
                         <span className="detail-text">
-                          ${(service.price / service.duration_minutes).toFixed(2)}/min
+                          {formatPrice(service.price / service.duration_minutes)}/min
                         </span>
                       </div>
                     </div>
@@ -268,7 +280,7 @@ const Services = () => {
               <MoneyIcon />
               <div className="summary-content">
                 <div className="summary-value">
-                  ${Math.round(services.reduce((acc, s) => acc + s.price, 0) / services.length)}
+                  {formatPrice(Math.round(services.reduce((acc, s) => acc + s.price, 0) / services.length))}
                 </div>
                 <div className="summary-label">Avg Price</div>
               </div>

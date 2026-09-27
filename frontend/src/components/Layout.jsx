@@ -33,20 +33,8 @@ const Layout = () => {
               >
                 Services
               </Link>
-              <Link
-                to="/book"
-                className={isActive('/book') ? 'active' : ''}
-                onClick={closeMobileMenu}
-              >
-                Book Appointment
-              </Link>
-              <Link
-                to="/my-appointments"
-                className={isActive('/my-appointments') ? 'active' : ''}
-                onClick={closeMobileMenu}
-              >
-                My Appointments
-              </Link>
+              {user && <Link to="/book" className={isActive('/book') ? 'active' : ''} onClick={closeMobileMenu}>Book Appointment</Link>}
+              {user && <Link to="/my-appointments" className={isActive('/my-appointments') ? 'active' : ''} onClick={closeMobileMenu}>My Appointments</Link>}
               {user?.role === 'admin' && (
                 <Link
                   to="/admin/dashboard"
@@ -67,23 +55,25 @@ const Layout = () => {
               >
                 {theme === 'light' ? <MoonIcon /> : <SunIcon />}
               </button>
-              <div className="user-info">
+              {user ? <div className="user-info">
                 <span className="user-email">{user?.email}</span>
                 <span className="user-role">{user?.role}</span>
                 <button onClick={logout} className="btn btn-secondary">
                   Logout
                 </button>
-              </div>
+              </div> : <Link to="/login" className="btn btn-secondary">Sign in</Link>}
               <button
                 className="mobile-menu-toggle"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label="Toggle menu"
+                aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-navigation"
               >
                 {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
               </button>
             </div>
             
-            <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+            <div id="mobile-navigation" className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
               <div className="mobile-menu-header">
                 <Logo />
                 <button
@@ -102,20 +92,10 @@ const Layout = () => {
                 >
                   Services
                 </Link>
-                <Link
-                  to="/book"
-                  className={isActive('/book') ? 'active' : ''}
-                  onClick={closeMobileMenu}
-                >
-                  Book Appointment
-                </Link>
-                <Link
-                  to="/my-appointments"
-                  className={isActive('/my-appointments') ? 'active' : ''}
-                  onClick={closeMobileMenu}
-                >
-                  My Appointments
-                </Link>
+                {user && <Link to="/book" className={isActive('/book') ? 'active' : ''} onClick={closeMobileMenu}>Book Appointment</Link>}
+                {user && <Link to="/my-appointments" className={isActive('/my-appointments') ? 'active' : ''} onClick={closeMobileMenu}>My Appointments</Link>}
+                {!user && <Link to="/login" onClick={closeMobileMenu}>Sign in</Link>}
+                {user && <button type="button" className="mobile-menu-signout" onClick={() => { logout(); closeMobileMenu() }}>Sign out</button>}
                 {user?.role === 'admin' && (
                   <Link
                     to="/admin/dashboard"

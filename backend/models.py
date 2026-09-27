@@ -90,8 +90,8 @@ class Appointment(db.Model):
             'user_id': self.user_id,
             'service_id': self.service_id,
             'service_name': self.service.name if self.service else None,
-            'start_time': self.start_time.isoformat() if self.start_time else None,
-            'end_time': self.end_time.isoformat() if self.end_time else None,
+            'start_time': self.start_time.isoformat() + 'Z' if self.start_time else None,
+            'end_time': self.end_time.isoformat() + 'Z' if self.end_time else None,
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

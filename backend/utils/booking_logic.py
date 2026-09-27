@@ -1,7 +1,9 @@
 """
 Booking logic utilities for calculating available time slots
 """
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, timezone
+from zoneinfo import ZoneInfo
+from flask import current_app
 from models import WorkingHours, Appointment
 
 def get_working_hours_for_day(day_of_week):
@@ -36,7 +38,7 @@ def generate_time_slots(start_time, end_time, slot_duration_minutes, buffer_minu
     
     return slots
 
-def get_existing_appointments(start_date, end_date):
+def get_existing_appointments(start_date, end_date, exclude_id=None):
     """
     Get all existing appointments between start_date and end_date
     
@@ -47,11 +49,14 @@ def get_existing_appointments(start_date, end_date):
     Returns:
         List of appointment dictionaries with start_time and end_time
     """
-    appointments = Appointment.query.filter(
-        Appointment.start_time >= start_date,
+    query = Appointment.query.filter(
         Appointment.start_time < end_date,
+        Appointment.end_time > start_date,
         Appointment.status == 'confirmed'
-    ).all()
+    )
+    if exclude_id is not None:
+        query = query.filter(Appointment.id != exclude_id)
+    appointments = query.all()
     
     return [
         {
@@ -79,7 +84,7 @@ def is_slot_available(slot_start, slot_end, existing_appointments):
             return False
     return True
 
-def get_available_slots(date, service_duration_minutes, buffer_minutes=15):
+def get_available_slots(date, service_duration_minutes, buffer_minutes=15, exclude_id=None):
     """
     Get all available time slots for a specific date and service duration
     
@@ -100,13 +105,14 @@ def get_available_slots(date, service_duration_minutes, buffer_minutes=15):
         return []
     
     # Create datetime objects for start and end of working hours
-    start_datetime = datetime.combine(date, working_hours['start'])
-    end_datetime = datetime.combine(date, working_hours['end'])
+    booking_zone = ZoneInfo(current_app.config['BOOKING_TIMEZONE'])
+    start_datetime = datetime.combine(date, working_hours['start'], booking_zone)
+    end_datetime = datetime.combine(date, working_hours['end'], booking_zone)
     
     # Get existing appointments for this date
-    day_start = datetime.combine(date, time.min)
-    day_end = datetime.combine(date, time.max)
-    existing_appointments = get_existing_appointments(day_start, day_end)
+    day_start = datetime.combine(date, time.min, booking_zone).astimezone(timezone.utc).replace(tzinfo=None)
+    day_end = datetime.combine(date + timedelta(days=1), time.min, booking_zone).astimezone(timezone.utc).replace(tzinfo=None)
+    existing_appointments = get_existing_appointments(day_start, day_end, exclude_id)
     
     # Generate all possible slots
     all_slots = generate_time_slots(start_datetime, end_datetime, service_duration_minutes, buffer_minutes)
@@ -117,10 +123,12 @@ def get_available_slots(date, service_duration_minutes, buffer_minutes=15):
         slot_end = slot_start + timedelta(minutes=service_duration_minutes)
         
         # Don't allow bookings in the past
-        if slot_start < datetime.now():
+        if slot_start <= datetime.now(booking_zone):
             continue
         
-        if is_slot_available(slot_start, slot_end, existing_appointments):
+        slot_start_utc = slot_start.astimezone(timezone.utc).replace(tzinfo=None)
+        slot_end_utc = slot_end.astimezone(timezone.utc).replace(tzinfo=None)
+        if is_slot_available(slot_start_utc, slot_end_utc, existing_appointments):
             available_slots.append(slot_start)
     
     return available_slots
@@ -128,4 +136,3 @@ def get_available_slots(date, service_duration_minutes, buffer_minutes=15):
 def format_time_slot(dt):
     """Format datetime to readable time string"""
     return dt.strftime('%H:%M')
-

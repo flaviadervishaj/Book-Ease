@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db, Appointment, Service
+from models import db, Appointment, Service, WorkingHours
 from datetime import datetime, timedelta, timezone
-from utils.booking_logic import get_available_slots, is_slot_available, get_existing_appointments
+from zoneinfo import ZoneInfo
+from utils.booking_logic import get_available_slots
 
 appointments_bp = Blueprint('appointments', __name__)
 
@@ -13,6 +14,17 @@ def get_current_user():
     # Identity is now a string (user ID), not a dictionary
     user_id = int(identity) if isinstance(identity, str) else identity
     return User.query.get(user_id)
+
+
+def slot_is_bookable(start_time, service, exclude_id=None):
+    """Check the configured business hours and lock the day against parallel bookings."""
+    booking_zone = ZoneInfo(current_app.config['BOOKING_TIMEZONE'])
+    local_date = start_time.replace(tzinfo=timezone.utc).astimezone(booking_zone).date()
+    WorkingHours.query.filter_by(day_of_week=local_date.weekday()).with_for_update().first()
+    return any(
+        slot.astimezone(timezone.utc).replace(tzinfo=None) == start_time
+        for slot in get_available_slots(local_date, service.duration_minutes, exclude_id=exclude_id)
+    )
 
 @appointments_bp.route('', methods=['GET'])
 @jwt_required()
@@ -39,11 +51,12 @@ def get_appointments():
         if date_filter:
             try:
                 filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
-                start_of_day = datetime.combine(filter_date, datetime.min.time())
-                end_of_day = datetime.combine(filter_date, datetime.max.time())
+                zone = ZoneInfo(current_app.config['BOOKING_TIMEZONE'])
+                start_of_day = datetime.combine(filter_date, datetime.min.time(), zone).astimezone(timezone.utc).replace(tzinfo=None)
+                end_of_day = datetime.combine(filter_date + timedelta(days=1), datetime.min.time(), zone).astimezone(timezone.utc).replace(tzinfo=None)
                 query = query.filter(
                     Appointment.start_time >= start_of_day,
-                    Appointment.start_time <= end_of_day
+                    Appointment.start_time < end_of_day
                 )
             except ValueError:
                 return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
@@ -145,17 +158,8 @@ def create_appointment():
         # Calculate end time
         end_time = start_time + timedelta(minutes=service.duration_minutes)
         
-        # Check if slot is available
-        day_start = datetime.combine(start_time.date(), datetime.min.time())
-        day_end = datetime.combine(start_time.date(), datetime.max.time())
-        existing_appointments = get_existing_appointments(day_start, day_end)
-        
-        if not is_slot_available(start_time, end_time, existing_appointments):
-            return jsonify({'error': 'This time slot is no longer available'}), 400
-        
-        # Don't allow bookings in the past
-        if start_time < datetime.now():
-            return jsonify({'error': 'Cannot book appointments in the past'}), 400
+        if not slot_is_bookable(start_time, service):
+            return jsonify({'error': 'This time is outside working hours or no longer available'}), 400
         
         # Create appointment
         appointment = Appointment(
@@ -174,30 +178,10 @@ def create_appointment():
             'appointment': appointment.to_dict()
         }), 201
         
-    except Exception as e:
+    except Exception:
         db.session.rollback()
-        import traceback
-        error_details = str(e)
-        # Log the full traceback for debugging
-        print(f"Error creating appointment: {error_details}")
-        print(traceback.format_exc())
-        
-        # Check if it's a database constraint error
-        if 'UNIQUE constraint' in error_details or 'duplicate' in error_details.lower():
-            return jsonify({
-                'error': 'This appointment slot is already booked. Please select another time.'
-            }), 400
-        
-        # Check if it's a database connection error
-        if 'OperationalError' in str(type(e)) or 'connection' in error_details.lower():
-            return jsonify({
-                'error': 'Database connection error. Please try again later.'
-            }), 500
-        
-        return jsonify({
-            'error': f'Failed to create appointment: {error_details}',
-            'details': str(e) if current_app.config.get('DEBUG') else None
-        }), 500
+        current_app.logger.exception('Appointment creation failed')
+        return jsonify({'error': 'Could not book the appointment. Please try again.'}), 500
 
 @appointments_bp.route('/<int:appointment_id>', methods=['GET'])
 @jwt_required()
@@ -235,41 +219,38 @@ def update_appointment(appointment_id):
         # Check access
         if not user.is_admin() and appointment.user_id != user.id:
             return jsonify({'error': 'Access denied'}), 403
-        
+
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
+
+        if 'status' in data and 'start_time' in data:
+            return jsonify({'error': 'Update status or time in separate requests'}), 400
         
         # Update status
         if 'status' in data:
             valid_statuses = ['confirmed', 'cancelled', 'completed']
             if data['status'] not in valid_statuses:
                 return jsonify({'error': f'Status must be one of: {", ".join(valid_statuses)}'}), 400
+            if not user.is_admin() and (data['status'] != 'cancelled' or appointment.status != 'confirmed'):
+                return jsonify({'error': 'Only confirmed appointments can be cancelled'}), 403
             appointment.status = data['status']
         
         # Reschedule (update start_time)
         if 'start_time' in data and data['start_time']:
             try:
+                if not user.is_admin() and appointment.status != 'confirmed':
+                    return jsonify({'error': 'Only confirmed appointments can be rescheduled'}), 400
                 new_start_time = datetime.fromisoformat(data['start_time'].replace('Z', '+00:00'))
                 if new_start_time.tzinfo:
-                    new_start_time = new_start_time.replace(tzinfo=None)
+                    new_start_time = new_start_time.astimezone(timezone.utc).replace(tzinfo=None)
                 
                 # Get service to calculate new end time
                 service = Service.query.get(appointment.service_id)
                 new_end_time = new_start_time + timedelta(minutes=service.duration_minutes)
                 
-                # Check if new slot is available (exclude current appointment)
-                day_start = datetime.combine(new_start_time.date(), datetime.min.time())
-                day_end = datetime.combine(new_start_time.date(), datetime.max.time())
-                existing_appointments = get_existing_appointments(day_start, day_end)
-                # Remove current appointment from conflicts
-                existing_appointments = [a for a in existing_appointments if a['start'] != appointment.start_time]
-                
-                if not is_slot_available(new_start_time, new_end_time, existing_appointments):
-                    return jsonify({'error': 'This time slot is no longer available'}), 400
-                
-                if new_start_time < datetime.now():
-                    return jsonify({'error': 'Cannot reschedule to a past time'}), 400
+                if not slot_is_bookable(new_start_time, service, exclude_id=appointment.id):
+                    return jsonify({'error': 'This time is outside working hours or no longer available'}), 400
                 
                 appointment.start_time = new_start_time
                 appointment.end_time = new_end_time
@@ -291,17 +272,15 @@ def update_appointment(appointment_id):
 @appointments_bp.route('/<int:appointment_id>', methods=['DELETE'])
 @jwt_required()
 def delete_appointment(appointment_id):
-    """Delete an appointment"""
+    """Delete an appointment (admin only). Clients cancel through PUT."""
     try:
         user = get_current_user()
+        if not user or not user.is_admin():
+            return jsonify({'error': 'Admin access required'}), 403
         appointment = Appointment.query.get(appointment_id)
         
         if not appointment:
             return jsonify({'error': 'Appointment not found'}), 404
-        
-        # Check access
-        if not user.is_admin() and appointment.user_id != user.id:
-            return jsonify({'error': 'Access denied'}), 403
         
         db.session.delete(appointment)
         db.session.commit()
@@ -313,4 +292,3 @@ def delete_appointment(appointment_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
