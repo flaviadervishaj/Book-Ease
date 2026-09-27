@@ -67,16 +67,9 @@ Complete guide for deploying BookEase service booking platform to production.
 3. Update `CORS_ORIGINS` with frontend URL
 4. Save changes (backend will restart)
 
-### Step 5: Seed Database
+### Step 5: Accounts and sample services
 
-Backend auto-seeds on startup if database is empty. To manually seed:
-
-1. Open backend URL: `https://bookease-backend.onrender.com/api/admin/seed`
-2. Or use POST request to the same endpoint
-
-**Demo Accounts:**
-- Admin: `admin@bookease.com` / `admin123`
-- Client: `client@example.com` / `client123`
+The backend adds sample services and working hours when the service table is empty. It does not create accounts. Register a client through the frontend. To provision an administrator, run `python backend/create_admin.py` in a trusted environment connected to the production database; the command asks for credentials interactively. Rotate the password of any older sample administrator account before making the app public. Set `BOOKING_TIMEZONE` to the service location's IANA time zone (the default is `Europe/Tirane`).
 
 ### Step 6: Setup Keep-Alive (Prevent Cold Starts)
 

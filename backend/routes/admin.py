@@ -161,31 +161,3 @@ def create_working_hours():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/seed', methods=['POST'])
-def seed_database():
-    """Seed database with demo data (only if database is empty)"""
-    try:
-        # Check if database already has data
-        user_count = User.query.count()
-        service_count = Service.query.count()
-        
-        if user_count > 0 and service_count > 0:
-            return jsonify({
-                'message': 'Database already contains data. Seeding skipped.',
-                'users': user_count,
-                'services': service_count
-            }), 200
-        
-        # Import and run seed function
-        from seed import seed_database as run_seed
-        run_seed()
-        
-        return jsonify({
-            'message': 'Database seeded successfully!',
-            'users': User.query.count(),
-            'services': Service.query.count()
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-

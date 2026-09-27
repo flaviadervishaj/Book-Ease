@@ -111,22 +111,14 @@ npm run dev
 ```
 Frontend will run on `http://localhost:5173`
 
-## Default Accounts
+## Accounts
 
-After seeding the database:
-
-- **Admin**: 
-  - Email: `admin@bookease.com`
-  - Password: `admin123`
-
-- **Client**: 
-  - Email: `client@example.com`
-  - Password: `client123`
+The public registration form creates client accounts. No default accounts are created. For an administrator, run `python backend/create_admin.py` from a trusted shell with `DATABASE_URL` and `JWT_SECRET_KEY` configured. The command prompts for an email and password without writing them to source code. If an older deployment contains the sample administrator account, run this command with its email to change its password before using the admin area.
 
 ## Project Structure
 
 ```
-smart-job-application-tracker/
+Book-Ease/
 ├── backend/
 │   ├── app.py                 # Flask application entry point
 │   ├── config.py              # Configuration settings

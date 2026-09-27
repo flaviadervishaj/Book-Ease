@@ -17,6 +17,7 @@ const Book = () => {
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [availableSlots, setAvailableSlots] = useState([])
+  const [bookingTimezone, setBookingTimezone] = useState('Europe/Tirane')
   const [loading, setLoading] = useState(false)
   const [loadingSlots, setLoadingSlots] = useState(false)
   const [loadingServices, setLoadingServices] = useState(true)
@@ -73,6 +74,7 @@ const Book = () => {
         }
       })
       setAvailableSlots(response.data.available_slots || [])
+      setBookingTimezone(response.data.timezone || 'Europe/Tirane')
       if (response.data.available_slots && response.data.available_slots.length === 0) {
         setError('No available time slots for this date. Please try another date.')
       }
@@ -181,10 +183,11 @@ const Book = () => {
     return date.toLocaleDateString('en-US', { weekday: 'long' })
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const localDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  const today = localDate(new Date())
   const maxDate = new Date()
   maxDate.setDate(maxDate.getDate() + 30)
-  const maxDateStr = maxDate.toISOString().split('T')[0]
+  const maxDateStr = localDate(maxDate)
 
   const selectedServiceData = services.find(s => s.id === parseInt(selectedService))
 
@@ -313,7 +316,7 @@ const Book = () => {
               ) : (
                 <>
                   <p className="slots-info">
-                    {availableSlots.length} {availableSlots.length === 1 ? 'slot' : 'slots'} available
+                    {availableSlots.length} {availableSlots.length === 1 ? 'slot' : 'slots'} available · {bookingTimezone} time
                   </p>
                   <div className="time-slots">
                     {availableSlots.map((slot) => (

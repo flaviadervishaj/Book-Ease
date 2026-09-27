@@ -47,11 +47,10 @@ def create_app():
             db.create_all()
             print("Database tables created successfully")
             
-            user_count = User.query.count()
             service_count = Service.query.count()
             
-            if user_count == 0 or service_count == 0:
-                print("Database appears empty, seeding with demo data...")
+            if service_count == 0:
+                print("No services found, adding sample services and working hours...")
                 try:
                     from seed import seed_database
                     seed_database()

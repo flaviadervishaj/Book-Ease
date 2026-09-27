@@ -1,33 +1,9 @@
-from app import create_app
-from models import db, User, Service, WorkingHours
+from flask import current_app
+from models import db, Service, WorkingHours
 from datetime import time
 
 def seed_database():
-    app = create_app()
-    
-    with app.app_context():
-        # Create admin user
-        admin = User.query.filter_by(email='admin@bookease.com').first()
-        if not admin:
-            admin = User(email='admin@bookease.com', role='admin')
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print("Created admin user: admin@bookease.com / admin123")
-        else:
-            print("Admin user already exists")
-        
-        # Create demo client
-        client = User.query.filter_by(email='client@example.com').first()
-        if not client:
-            client = User(email='client@example.com', role='client')
-            client.set_password('client123')
-            db.session.add(client)
-            db.session.commit()
-            print("Created client user: client@example.com / client123")
-        else:
-            print("Client user already exists")
-        
+    with current_app.app_context():
         # Create services with addresses and images
         services_data = [
             {
@@ -178,10 +154,9 @@ def seed_database():
         print("Created working hours")
         
         print("\nDatabase seeding completed!")
-        print("\nDemo accounts:")
-        print("Admin: admin@bookease.com / admin123")
-        print("Client: client@example.com / client123")
         print(f"\nTotal services available: {len(services_data)}")
 
 if __name__ == '__main__':
-    seed_database()
+    from app import app
+    with app.app_context():
+        seed_database()
