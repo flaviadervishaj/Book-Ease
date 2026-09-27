@@ -7,7 +7,7 @@ os.environ['JWT_SECRET_KEY'] = 'test-key-that-is-long-enough-for-hs256'
 os.environ['BOOKING_TIMEZONE'] = 'Europe/Tirane'
 
 from app import app
-from models import db, User
+from models import db, User, Service
 
 
 class BookingFlowTests(unittest.TestCase):
@@ -27,6 +27,20 @@ class BookingFlowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.json['user']['role'], 'client')
         return {'Authorization': f"Bearer {response.json['access_token']}"}
+
+    def test_demo_address_update_preserves_custom_locations(self):
+        from seed import DEMO_ADDRESS, OLD_DEMO_ADDRESS, update_demo_addresses
+
+        with app.app_context():
+            demo = Service.query.filter_by(name='Haircut').first()
+            custom = Service.query.filter_by(name='Hair Color').first()
+            demo.address = OLD_DEMO_ADDRESS
+            custom.address = 'Customer location'
+            db.session.commit()
+
+            update_demo_addresses()
+            self.assertEqual(demo.address, DEMO_ADDRESS)
+            self.assertEqual(custom.address, 'Customer location')
 
     def test_booking_slot_and_reschedule(self):
         with app.app_context():

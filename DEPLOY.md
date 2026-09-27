@@ -1,179 +1,51 @@
-# BookEase - Deployment Guide
+# Deploy BookEase on Render
 
-Complete guide for deploying BookEase service booking platform to production.
+BookEase needs a Postgres database, a Python web service, and a static site. Put all three in the same Render workspace. Keep the database and web service in the same region.
 
-## Quick Start - Render.com (Recommended)
+## 1. Database
 
-### Prerequisites
-- GitHub account
-- Render.com account (free)
+Create a Render Postgres database. On its **Info** page, copy the **Internal Database URL**. Do not add the connection string to GitHub or to the frontend.
 
-### Step 1: Create PostgreSQL Database
+## 2. API web service
 
-1. Go to https://render.com
-2. Click "New +" → "PostgreSQL"
-3. Configure:
-   - **Name:** `bookease-db`
-   - **Database:** `bookease_db`
-   - **Region:** Choose closest (e.g., Frankfurt for Europe)
-   - **PostgreSQL Version:** 15+
-   - **Plan:** Free
-4. Click "Create Database"
-5. **Save** the connection string (External Database URL)
+Connect this repository and select the branch you want to deploy. With the repository root unchanged, use:
 
-### Step 2: Deploy Backend
+| Setting | Value |
+| --- | --- |
+| Runtime | Python 3 |
+| Build command | `pip install -r backend/requirements.txt` |
+| Start command | `cd backend && gunicorn app:app --bind 0.0.0.0:$PORT --workers 1` |
 
-1. Click "New +" → "Web Service"
-2. Connect repository: `flaviadervishaj/Book-Ease`
-3. Configure:
-   - **Name:** `bookease-backend`
-   - **Environment:** Python 3
-   - **Region:** Same as database
-   - **Branch:** `main`
-   - **Root Directory:** `backend`
-   - **Build Command:** `pip install -r requirements.txt`
-   - **Start Command:** `gunicorn app:app --bind 0.0.0.0:$PORT --workers 2`
-   - **Plan:** Free
-4. Add Environment Variables:
-   - `DATABASE_URL` = (connection string from database)
-   - `JWT_SECRET_KEY` = (generate random string)
-   - `CORS_ORIGINS` = `https://bookease-frontend.onrender.com` (update after frontend deploy)
-   - `FLASK_ENV` = `production`
-5. Click "Create Web Service"
+Set these environment variables on the **web service**:
 
-### Step 3: Deploy Frontend
+| Key | Value |
+| --- | --- |
+| `DATABASE_URL` | Internal Database URL from step 1 |
+| `JWT_SECRET_KEY` | A unique, long random value |
+| `FLASK_ENV` | `production` |
+| `BOOKING_TIMEZONE` | `Europe/Tirane` |
+| `CORS_ORIGINS` | Exact frontend origin, with no trailing slash |
+| `PYTHON_VERSION` | `3.11.0` |
 
-1. Click "New +" → "Static Site"
-2. Connect repository: `flaviadervishaj/Book-Ease`
-3. Configure:
-   - **Name:** `bookease-frontend`
-   - **Branch:** `main`
-   - **Root Directory:** `frontend`
-   - **Build Command:** `npm install && npm run build`
-   - **Publish Directory:** `dist`
-4. Add Environment Variable:
-   - `VITE_API_URL` = (backend URL, e.g., `https://bookease-backend.onrender.com`)
-5. **IMPORTANT:** After creating, go to Settings → Redirects/Rewrites
-6. Add Rewrite Rule:
-   - **Source:** `/*`
-   - **Destination:** `/index.html`
-   - **Type:** Rewrite (not Redirect)
-7. Click "Create Static Site"
+The application creates tables and seeds sample services and working hours when the service table is empty. Public registration does not create administrator accounts. Use `python backend/create_admin.py` from a trusted shell with the same database and signing key when an administrator is needed.
 
-### Step 4: Update CORS
+## 3. Static site
 
-1. Get frontend URL from Static Site dashboard
-2. Go to Backend Service → Environment
-3. Update `CORS_ORIGINS` with frontend URL
-4. Save changes (backend will restart)
+Connect the same repository and branch. With the repository root unchanged, use:
 
-### Step 5: Accounts and sample services
+| Setting | Value |
+| --- | --- |
+| Build command | `cd frontend && npm install && npm run build` |
+| Publish directory | `frontend/dist` |
+| Environment variable | `VITE_API_URL` = exact public URL of the API service |
 
-The backend adds sample services and working hours when the service table is empty. It does not create accounts. Register a client through the frontend. To provision an administrator, run `python backend/create_admin.py` in a trusted environment connected to the production database; the command asks for credentials interactively. Rotate the password of any older sample administrator account before making the app public. Set `BOOKING_TIMEZONE` to the service location's IANA time zone (the default is `Europe/Tirane`).
+Under **Redirects/Rewrites**, add a **Rewrite** from `/*` to `/index.html`. Return to the API service and set `CORS_ORIGINS` to the static site's exact origin, then save and deploy.
 
-### Step 6: Setup Keep-Alive (Prevent Cold Starts)
+## Check the deployment
 
-**Option 1: cron-job.org (Free)**
+1. Open the static site's `/services` page; the sample services should load without signing in.
+2. Register a client and book an available slot. Check that the confirmation and appointment list show the same booking.
+3. Sign out, sign in again, and verify that the booking remains visible. Reschedule or cancel it to check the full flow.
+4. If an action fails, inspect the web service's **Logs** and confirm its database URL and the two cross-origin URLs in Render. Never paste secrets into an issue or a screenshot.
 
-1. Go to https://cron-job.org
-2. Sign up (free)
-3. Create cronjob:
-   - **Title:** `BookEase Keep-Alive`
-   - **URL:** `https://bookease-backend.onrender.com/api/ping`
-   - **Schedule:** Every 10 minutes (`*/10 * * * *`)
-   - **Method:** GET
-4. Click "Create cronjob"
-
-**Option 2: UptimeRobot (Alternative)**
-
-1. Go to https://uptimerobot.com
-2. Sign up (free)
-3. Add Monitor → HTTP(s)
-4. Configure:
-   - **URL:** `https://bookease-backend.onrender.com/api/ping`
-   - **Interval:** 5 minutes
-5. Click "Create Monitor"
-
-## Environment Variables
-
-### Backend
-```env
-DATABASE_URL=postgresql://user:password@host:port/database
-JWT_SECRET_KEY=your-secret-key-here
-CORS_ORIGINS=https://your-frontend-url.com
-FLASK_ENV=production
-```
-
-### Frontend
-```env
-VITE_API_URL=https://your-backend-url.com
-```
-
-## Troubleshooting
-
-### Backend won't start
-- Check logs in Render dashboard
-- Verify `DATABASE_URL` is correct
-- Ensure `gunicorn` is in `requirements.txt`
-- Check build/start commands
-
-### Frontend can't connect to backend
-- Verify `VITE_API_URL` in frontend environment
-- Check `CORS_ORIGINS` in backend environment
-- Check browser console for errors
-- Verify backend URL is accessible
-
-### Database errors
-- Verify `DATABASE_URL` connection string
-- Check database is running
-- Ensure SSL mode is enabled (auto-handled in code)
-
-### CORS errors
-- Add frontend URL to `CORS_ORIGINS` in backend
-- Ensure no trailing slash in URLs
-- Restart backend after changes
-
-### Keep-alive not working
-- Verify cron job URL is correct
-- Check cron job execution history
-- Test endpoint manually: `https://your-backend.onrender.com/api/ping`
-
-## Alternative Platforms
-
-### Railway.app
-- Free tier with $5 credit/month
-- No sleep mode
-- Easy PostgreSQL setup
-
-### Vercel (Frontend) + Railway (Backend)
-- Vercel for static hosting
-- Railway for backend and database
-
-## Production Tips
-
-1. **Security:**
-   - Use strong `JWT_SECRET_KEY` (generate with `openssl rand -hex 32`)
-   - Enable HTTPS (automatic on Render)
-   - Never commit `.env` files
-
-2. **Performance:**
-   - Use keep-alive ping to prevent cold starts
-   - Monitor usage to stay within free tier limits
-   - Consider paid plan for production use
-
-3. **Monitoring:**
-   - Use Render built-in logs
-   - Set up error tracking (e.g., Sentry)
-   - Monitor database usage
-
-4. **Backups:**
-   - Free plan doesn't include automatic backups
-   - Consider manual backups for important data
-
-## Support
-
-For issues:
-1. Check Render logs
-2. Verify environment variables
-3. Test locally first
-4. Check platform documentation
+The free Render Postgres plan expires after 30 days. Use a durable database before distributing this as a permanent demo link.

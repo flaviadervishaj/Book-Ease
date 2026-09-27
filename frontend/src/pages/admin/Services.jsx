@@ -4,6 +4,7 @@ import { useToast } from '../../contexts/ToastContext'
 import ConfirmationDialog from '../../components/ConfirmationDialog'
 import { CardSkeleton } from '../../components/LoadingSkeleton'
 import { DocumentIcon } from '../../components/Icons'
+import { formatPrice } from '../../utils/formatPrice'
 import './Admin.css'
 
 const AdminServices = () => {
@@ -172,7 +173,7 @@ const AdminServices = () => {
                 />
               </div>
               <div className="input-group">
-                <label>Price ($) *</label>
+                <label>Price (€) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -199,9 +200,9 @@ const AdminServices = () => {
               <div className="input-group">
                 <label>Price per Minute</label>
                 <div className="calculated-value">
-                  ${formData.price && formData.duration_minutes 
-                    ? (parseFloat(formData.price) / formData.duration_minutes).toFixed(2)
-                    : '0.00'}
+                  {formatPrice(formData.price && formData.duration_minutes
+                    ? parseFloat(formData.price) / formData.duration_minutes
+                    : 0)}
                 </div>
               </div>
             </div>
@@ -320,7 +321,7 @@ const AdminServices = () => {
                   </td>
                   <td>{service.duration_minutes} min</td>
                   <td>
-                    <strong className="price-cell">${service.price}</strong>
+                    <strong className="price-cell">{formatPrice(service.price)}</strong>
                   </td>
                   <td>
                     <div className="table-actions">

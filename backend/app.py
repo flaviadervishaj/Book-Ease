@@ -46,13 +46,15 @@ def create_app():
         try:
             db.create_all()
             print("Database tables created successfully")
+
+            from seed import seed_database, update_demo_addresses
+            update_demo_addresses()
             
             service_count = Service.query.count()
             
             if service_count == 0:
                 print("No services found, adding sample services and working hours...")
                 try:
-                    from seed import seed_database
                     seed_database()
                     print("Database seeded successfully!")
                 except Exception as seed_error:

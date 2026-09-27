@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { CardSkeleton } from '../components/LoadingSkeleton'
 import { SearchIcon, ClockIcon, MoneyIcon, StatsIcon, LocationIcon } from '../components/Icons'
+import { formatPrice } from '../utils/formatPrice'
 import './Services.css'
 
 const Services = () => {
@@ -136,7 +137,7 @@ const Services = () => {
           </div>
 
           <div className="price-filter">
-            <label>Price Range: ${priceRange[0]} - ${priceRange[1]}</label>
+            <label>Price Range: {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}</label>
             <div className="price-slider-container">
               <input
                 type="range"
@@ -215,7 +216,7 @@ const Services = () => {
                   <div className="service-content">
                     <div className="service-header">
                       <h3>{service.name}</h3>
-                      <div className="service-price">${service.price}</div>
+                      <div className="service-price">{formatPrice(service.price)}</div>
                     </div>
                     
                     {service.description && (
@@ -237,7 +238,7 @@ const Services = () => {
                       <div className="detail-item">
                         <MoneyIcon />
                         <span className="detail-text">
-                          ${(service.price / service.duration_minutes).toFixed(2)}/min
+                          {formatPrice(service.price / service.duration_minutes)}/min
                         </span>
                       </div>
                     </div>
@@ -279,7 +280,7 @@ const Services = () => {
               <MoneyIcon />
               <div className="summary-content">
                 <div className="summary-value">
-                  ${Math.round(services.reduce((acc, s) => acc + s.price, 0) / services.length)}
+                  {formatPrice(Math.round(services.reduce((acc, s) => acc + s.price, 0) / services.length))}
                 </div>
                 <div className="summary-label">Avg Price</div>
               </div>

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useToast } from '../contexts/ToastContext'
 import ConfirmationDialog from '../components/ConfirmationDialog'
 import { getRelativeTime } from '../utils/dateUtils'
+import { formatPrice } from '../utils/formatPrice'
 import { CalendarIcon, ClockIcon } from '../components/Icons'
 import './MyAppointments.css'
 
@@ -15,6 +16,8 @@ const MyAppointments = () => {
   const [cancelDialog, setCancelDialog] = useState({ isOpen: false, appointmentId: null })
   const toast = useToast()
   const navigate = useNavigate()
+  const location = useLocation()
+  const confirmation = location.state?.confirmation
 
   useEffect(() => {
     fetchAppointments()
@@ -109,6 +112,34 @@ const MyAppointments = () => {
           + Book New Appointment
         </button>
       </div>
+
+      {confirmation && (
+        <section className="booking-confirmation" aria-labelledby="booking-confirmation-title" role="status">
+          <div className="confirmation-heading">
+            <div>
+              <span className="confirmation-label">Booking #{confirmation.id}</span>
+              <h2 id="booking-confirmation-title">
+                Appointment {confirmation.action === 'rescheduled' ? 'rescheduled' : 'confirmed'}
+              </h2>
+            </div>
+            <button
+              type="button"
+              className="confirmation-dismiss"
+              aria-label="Dismiss confirmation"
+              onClick={() => navigate(location.pathname, { replace: true })}
+            >
+              Close
+            </button>
+          </div>
+          <dl className="confirmation-details">
+            <div><dt>Service</dt><dd>{confirmation.service}</dd></div>
+            <div><dt>Date</dt><dd>{new Date(`${confirmation.date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</dd></div>
+            <div><dt>Time</dt><dd>{confirmation.time} · {confirmation.timezone}</dd></div>
+            <div><dt>Price</dt><dd>{formatPrice(confirmation.price)}</dd></div>
+          </dl>
+          <p>You can manage this appointment below.</p>
+        </section>
+      )}
 
       <div className="status-filters">
         <button

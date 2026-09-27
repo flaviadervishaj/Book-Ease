@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext'
 import ConfirmationDialog from '../components/ConfirmationDialog'
 import { FormSkeleton } from '../components/LoadingSkeleton'
 import { CalendarIcon } from '../components/Icons'
+import { formatPrice } from '../utils/formatPrice'
 import './Book.css'
 
 const Book = () => {
@@ -139,8 +140,24 @@ const Book = () => {
         : await api.post('/appointments', { ...payload, service_id: Number(selectedService) })
       
       if (response.data) {
-        toast.success(rescheduleAppointment ? 'Appointment rescheduled' : 'Appointment booked successfully')
-        navigate('/my-appointments')
+        const appointment = response.data.appointment
+        if (!appointment?.id) {
+          navigate('/my-appointments')
+          return
+        }
+        navigate('/my-appointments', {
+          state: {
+            confirmation: {
+              id: appointment.id,
+              action: rescheduleAppointment ? 'rescheduled' : 'booked',
+              service: selectedServiceData.name,
+              date: selectedDate,
+              time: selectedSlot.time,
+              timezone: bookingTimezone,
+              price: selectedServiceData.price
+            }
+          }
+        })
       } else {
         throw new Error('No response data received')
       }
@@ -221,7 +238,7 @@ const Book = () => {
                 <option value="">Choose a service...</option>
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
-                    {service.name} - ${service.price} ({service.duration_minutes} min)
+                    {service.name} - {formatPrice(service.price)} ({service.duration_minutes} min)
                   </option>
                 ))}
               </select>
@@ -234,7 +251,7 @@ const Book = () => {
                 </div>
                 <div className="preview-item">
                   <span>Price:</span>
-                  <strong>${selectedServiceData.price}</strong>
+                  <strong>{formatPrice(selectedServiceData.price)}</strong>
                 </div>
               </div>
             )}
@@ -345,7 +362,7 @@ const Book = () => {
               </div>
               <div className="summary-item">
                 <span className="summary-label">Price:</span>
-                <strong className="summary-value price">${selectedServiceData.price}</strong>
+                <strong className="summary-value price">{formatPrice(selectedServiceData.price)}</strong>
               </div>
               {selectedDate && (
                 <div className="summary-item">
@@ -367,7 +384,7 @@ const Book = () => {
                 <div className="summary-total">
                   <div className="summary-item">
                     <span className="summary-label">Total:</span>
-                    <strong className="summary-value total-price">${selectedServiceData.price}</strong>
+                    <strong className="summary-value total-price">{formatPrice(selectedServiceData.price)}</strong>
                   </div>
                 </div>
               )}
