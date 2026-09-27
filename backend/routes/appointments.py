@@ -219,10 +219,13 @@ def update_appointment(appointment_id):
         # Check access
         if not user.is_admin() and appointment.user_id != user.id:
             return jsonify({'error': 'Access denied'}), 403
-        
+
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Request body is required'}), 400
+
+        if 'status' in data and 'start_time' in data:
+            return jsonify({'error': 'Update status or time in separate requests'}), 400
         
         # Update status
         if 'status' in data:
@@ -269,17 +272,15 @@ def update_appointment(appointment_id):
 @appointments_bp.route('/<int:appointment_id>', methods=['DELETE'])
 @jwt_required()
 def delete_appointment(appointment_id):
-    """Delete an appointment"""
+    """Delete an appointment (admin only). Clients cancel through PUT."""
     try:
         user = get_current_user()
+        if not user or not user.is_admin():
+            return jsonify({'error': 'Admin access required'}), 403
         appointment = Appointment.query.get(appointment_id)
         
         if not appointment:
             return jsonify({'error': 'Appointment not found'}), 404
-        
-        # Check access
-        if not user.is_admin() and appointment.user_id != user.id:
-            return jsonify({'error': 'Access denied'}), 403
         
         db.session.delete(appointment)
         db.session.commit()

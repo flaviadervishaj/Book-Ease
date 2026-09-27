@@ -23,6 +23,8 @@ const Book = () => {
   const [loadingServices, setLoadingServices] = useState(true)
   const [error, setError] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
+  const rescheduleId = searchParams.get('reschedule')
+  const [rescheduleAppointment, setRescheduleAppointment] = useState(null)
 
   useEffect(() => {
     fetchServices()
@@ -31,6 +33,29 @@ const Book = () => {
       setSelectedService(serviceId)
     }
   }, [])
+
+  useEffect(() => {
+    if (!rescheduleId) return
+    if (!/^\d+$/.test(rescheduleId)) {
+      navigate('/my-appointments', { replace: true })
+      return
+    }
+    api.get(`/appointments/${rescheduleId}`)
+      .then(({ data }) => {
+        const appointment = data.appointment
+        if (appointment.status !== 'confirmed' || new Date(appointment.start_time) <= new Date()) {
+          toast.error('This appointment can no longer be rescheduled')
+          navigate('/my-appointments', { replace: true })
+          return
+        }
+        setRescheduleAppointment(appointment)
+        setSelectedService(String(appointment.service_id))
+      })
+      .catch(() => {
+        toast.error('Unable to load the appointment')
+        navigate('/my-appointments', { replace: true })
+      })
+  }, [rescheduleId])
 
   useEffect(() => {
     if (selectedService && selectedDate) {
@@ -108,44 +133,14 @@ const Book = () => {
     setShowConfirm(false)
 
     try {
-      // Ensure datetime is in proper ISO format
-      let datetimeToSend = selectedSlot.datetime
-      
-      // Ensure datetime is in ISO format with timezone
-      // Backend now returns UTC datetime with timezone info (ends with Z or +00:00)
-      if (datetimeToSend) {
-        // Backend should return datetime with timezone (ends with Z or +00:00)
-        // If it already has timezone, use it as is
-        if (datetimeToSend.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(datetimeToSend)) {
-          // Already has timezone, use as is
-        } else {
-          // No timezone, treat as UTC and add Z
-          datetimeToSend = datetimeToSend + 'Z'
-        }
-        
-        // Validate the datetime format
-        const dt = new Date(datetimeToSend)
-        if (isNaN(dt.getTime())) {
-          throw new Error(`Invalid datetime format: ${datetimeToSend}`)
-        }
-        
-        // Convert to ISO string (this ensures proper format)
-        datetimeToSend = dt.toISOString()
-      } else {
-        throw new Error('No datetime selected')
-      }
-
-      const response = await api.post('/appointments', {
-        service_id: parseInt(selectedService),
-        start_time: datetimeToSend
-      })
+      const payload = { start_time: selectedSlot.datetime }
+      const response = rescheduleAppointment
+        ? await api.put(`/appointments/${rescheduleAppointment.id}`, payload)
+        : await api.post('/appointments', { ...payload, service_id: Number(selectedService) })
       
       if (response.data) {
-        toast.success('Appointment booked successfully!')
-        // Small delay to show success message before navigation
-        setTimeout(() => {
-          navigate('/my-appointments')
-        }, 500)
+        toast.success(rescheduleAppointment ? 'Appointment rescheduled' : 'Appointment booked successfully')
+        navigate('/my-appointments')
       } else {
         throw new Error('No response data received')
       }
@@ -177,11 +172,7 @@ const Book = () => {
     }
   }
 
-  const getDayName = (dateString) => {
-    if (!dateString) return ''
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { weekday: 'long' })
-  }
+  const selectedCalendarDate = selectedDate ? new Date(`${selectedDate}T12:00:00`) : null
 
   const localDate = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   const today = localDate(new Date())
@@ -203,7 +194,7 @@ const Book = () => {
     <div className="book-page">
       <div className="page-header">
         <div>
-          <h1>Book Appointment</h1>
+          <h1>{rescheduleId ? 'Reschedule Appointment' : 'Book Appointment'}</h1>
           <p className="page-subtitle">Select a service, date, and available time slot</p>
         </div>
       </div>
@@ -218,6 +209,7 @@ const Book = () => {
             <div className="input-group">
               <select
                 value={selectedService || ''}
+                disabled={Boolean(rescheduleId)}
                 onChange={(e) => {
                   setSelectedService(e.target.value)
                   setSelectedDate('')
@@ -270,8 +262,8 @@ const Book = () => {
                 />
                 {selectedDate && (
                   <div className="date-info">
-                    <span className="day-name">{getDayName(selectedDate)}</span>
-                    <span className="date-display">{new Date(selectedDate).toLocaleDateString('en-US', { 
+                    <span className="day-name">{selectedCalendarDate.toLocaleDateString('en-US', { weekday: 'long' })}</span>
+                    <span className="date-display">{selectedCalendarDate.toLocaleDateString('en-US', {
                       month: 'long', 
                       day: 'numeric', 
                       year: 'numeric' 
@@ -358,7 +350,7 @@ const Book = () => {
               {selectedDate && (
                 <div className="summary-item">
                   <span className="summary-label">Date:</span>
-                  <strong className="summary-value">{new Date(selectedDate).toLocaleDateString('en-US', {
+                  <strong className="summary-value">{selectedCalendarDate.toLocaleDateString('en-US', {
                     weekday: 'short',
                     month: 'short',
                     day: 'numeric'
@@ -383,11 +375,11 @@ const Book = () => {
             {selectedSlot && (
               <button
                 onClick={() => setShowConfirm(true)}
-                disabled={loading}
+                disabled={loading || (Boolean(rescheduleId) && !rescheduleAppointment)}
                 className="btn btn-primary"
                 style={{ width: '100%', marginTop: '16px' }}
               >
-                Book Now
+                {rescheduleId ? 'Reschedule' : 'Book Now'}
               </button>
             )}
           </div>
@@ -408,10 +400,10 @@ const Book = () => {
           }
         }}
         onConfirm={handleConfirmBooking}
-        title="Confirm Booking"
+        title={rescheduleId ? 'Confirm Reschedule' : 'Confirm Booking'}
         message={
           selectedServiceData && selectedSlot
-            ? `Book ${selectedServiceData.name} on ${new Date(selectedDate).toLocaleDateString()} at ${selectedSlot.time}?`
+            ? `${rescheduleId ? 'Move' : 'Book'} ${selectedServiceData.name} to ${selectedCalendarDate.toLocaleDateString()} at ${selectedSlot.time}?`
             : 'Confirm this booking?'
         }
         confirmText="Confirm"

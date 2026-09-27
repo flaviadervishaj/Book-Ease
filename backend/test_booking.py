@@ -53,6 +53,12 @@ class BookingFlowTests(unittest.TestCase):
         self.assertEqual(created.status_code, 201, created.json)
         appointment = created.json['appointment']
         self.assertTrue(appointment['start_time'].endswith('Z'))
+        self.assertEqual(self.client.delete(
+            f"/api/appointments/{appointment['id']}", headers=headers,
+        ).status_code, 403)
+        self.assertEqual(self.client.put(f"/api/appointments/{appointment['id']}", json={
+            'status': 'cancelled', 'start_time': second['datetime'],
+        }, headers=headers).status_code, 400)
         self.assertEqual(self.client.post('/api/appointments', json={
             'service_id': 1, 'start_time': first['datetime'],
         }, headers=other_headers).status_code, 400)
