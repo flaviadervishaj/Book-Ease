@@ -6,6 +6,10 @@ load_dotenv()
 
 class Config:
     database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/bookease_db')
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql+psycopg2://', 1)
+    elif database_url.startswith('postgresql://'):
+        database_url = database_url.replace('postgresql://', 'postgresql+psycopg2://', 1)
     
     if 'render.com' in database_url or 'onrender.com' in database_url:
         if 'sslmode' not in database_url:
