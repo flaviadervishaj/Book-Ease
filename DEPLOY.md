@@ -1,10 +1,10 @@
 # Deploy BookEase on Render
 
-BookEase needs a Postgres database, a Python web service, and a static site. Put all three in the same Render workspace. Keep the database and web service in the same region.
+BookEase needs a PostgreSQL database, a Python web service, and a static site. The web service and static site run on Render; the database can be hosted separately.
 
 ## 1. Database
 
-Create a Render Postgres database. On its **Info** page, copy the **Internal Database URL**. Do not add the connection string to GitHub or to the frontend.
+Create a PostgreSQL database with a provider that fits the expected lifetime of the demo. Render's free Postgres databases expire after 30 days. A separate provider such as Neon can be used for a longer-lived free demo, subject to its usage limits. Copy its connection string with SSL enabled. If using a paid Render database instead, use its **Internal Database URL**. Do not add a connection string to GitHub or to the frontend.
 
 ## 2. API web service
 
@@ -20,7 +20,7 @@ Set these environment variables on the **web service**:
 
 | Key | Value |
 | --- | --- |
-| `DATABASE_URL` | Internal Database URL from step 1 |
+| `DATABASE_URL` | PostgreSQL connection string from step 1, with SSL for external databases |
 | `JWT_SECRET_KEY` | A unique, long random value |
 | `FLASK_ENV` | `production` |
 | `BOOKING_TIMEZONE` | `Europe/Tirane` |
@@ -48,4 +48,4 @@ Under **Redirects/Rewrites**, add a **Rewrite** from `/*` to `/index.html`. Retu
 3. Sign out, sign in again, and verify that the booking remains visible. Reschedule or cancel it to check the full flow.
 4. If an action fails, inspect the web service's **Logs** and confirm its database URL and the two cross-origin URLs in Render. Never paste secrets into an issue or a screenshot.
 
-The free Render Postgres plan expires after 30 days. Use a durable database before distributing this as a permanent demo link.
+Before switching an existing deployment to a new database, export its data and import it into the new database if existing accounts and appointments must be retained. Change only the backend's `DATABASE_URL`, then verify registration, sign-in, availability, and an existing appointment. Render's free web service may still take time to wake after inactivity.

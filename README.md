@@ -2,7 +2,7 @@
 
 BookEase is a service booking application built with React, Flask, and PostgreSQL. Visitors can explore services before signing in. Clients can reserve an available time, then review, move, or cancel their appointments. Administrators manage services, working hours, and booking statuses.
 
-**Demo:** [BookEase preview](https://bookease-preview-ui.onrender.com/services) · **Status:** preview branch; the free preview database is temporary.
+**Live demo:** [Explore BookEase](https://bookease-preview-ui.onrender.com/services). The demo currently uses a temporary database; see the deployment note below before adding this link to a CV.
 
 ## What it does
 
@@ -23,7 +23,7 @@ The catalog uses illustrative salon services and a clearly marked demo location.
 | Frontend | React, Vite, React Router, Axios, Recharts, CSS |
 | API | Flask, Flask-JWT-Extended, Flask-SQLAlchemy |
 | Data | PostgreSQL (SQLite in the booking flow test) |
-| Hosting | Render static site, web service, and Postgres |
+| Hosting | Render static site and web service, PostgreSQL |
 
 ## Run locally
 
@@ -82,4 +82,4 @@ The test covers client registration, access control, slot selection, competing b
 
 The frontend and API are separate Render services. Set `VITE_API_URL` to the API URL on the static site, `DATABASE_URL` to the Render Postgres **internal** URL on the API, and `CORS_ORIGINS` to the static site's origin. Set `JWT_SECRET_KEY` and `FLASK_ENV=production` on the API. Add a static-site rewrite from `/*` to `/index.html` so direct links work. See [DEPLOY.md](DEPLOY.md) for the full setup.
 
-The preview uses a free Render Postgres database, which expires 30 days after creation. A durable database is needed before using the demo link as a long-term CV link.
+The current demo uses a free Render Postgres database, which expires 30 days after creation. Move it to a durable PostgreSQL provider before using the demo link as a long-term CV link.

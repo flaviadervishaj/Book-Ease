@@ -12,7 +12,7 @@ services:
       - key: JWT_SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://bookease-frontend.onrender.com
+        sync: false
       - key: FLASK_ENV
         value: production
       - key: BOOKING_TIMEZONE
@@ -31,11 +31,4 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        value: https://bookease-backend.onrender.com
-
-databases:
-  # PostgreSQL Database
-  - name: bookease-db
-    plan: free
-    databaseName: bookease_db
-    user: bookease_user
+        sync: false
