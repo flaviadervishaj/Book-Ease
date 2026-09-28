@@ -46,24 +46,3 @@ export const getRelativeTime = (dateString) => {
   return `${years} year${years > 1 ? 's' : ''} ago`
 }
 
-export const getDaysUntil = (dateString) => {
-  if (!dateString) return null
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffTime = date - now
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  return diffDays
-}
-
-export const isDatePast = (dateString) => {
-  if (!dateString) return false
-  return new Date(dateString) < new Date()
-}
-
-export const isDateToday = (dateString) => {
-  if (!dateString) return false
-  const date = new Date(dateString)
-  const today = new Date()
-  return date.toDateString() === today.toDateString()
-}
-
