@@ -5,6 +5,31 @@
   position: relative;
 }
 
+.catalog-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 var(--spacing-lg);
+  padding: 0.9rem 1rem;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+.service-book-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 600px) {
+  .catalog-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 /* Background with gradient */
 .services-page::before {
   content: '';
