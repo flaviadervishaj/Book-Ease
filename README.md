@@ -2,7 +2,7 @@
 
 BookEase is a service booking application built with React, Flask, and PostgreSQL. Visitors can explore services before signing in. Clients can reserve an available time, then review, move, or cancel their appointments. Administrators manage services, working hours, and booking statuses.
 
-**Demo:** [BookEase preview](https://bookease-preview-ui.onrender.com/services) · **Status:** preview branch; the free preview database is temporary.
+**Live site:** [BookEase](https://bookease-frontend.onrender.com/services).
 
 ## What it does
 
