@@ -6,14 +6,32 @@ import { SearchIcon, ClockIcon, MoneyIcon, StatsIcon, LocationIcon } from '../co
 import { formatPrice } from '../utils/formatPrice'
 import './Services.css'
 
+const CATALOG_CACHE_KEY = 'bookease:public-services'
+const CATALOG_CACHE_TTL = 24 * 60 * 60 * 1000
+
+const readCachedServices = () => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CATALOG_CACHE_KEY))
+    return Array.isArray(cached?.services) && Date.now() - cached.savedAt < CATALOG_CACHE_TTL
+      ? cached.services
+      : []
+  } catch {
+    return []
+  }
+}
+
 const Services = () => {
-  const [services, setServices] = useState([])
+  const [services, setServices] = useState(readCachedServices)
   const [filteredServices, setFilteredServices] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(services.length === 0)
+  const [catalogReady, setCatalogReady] = useState(false)
   const [loadError, setLoadError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('name')
-  const [priceRange, setPriceRange] = useState([0, 1000])
+  const [priceRange, setPriceRange] = useState(() => [
+    0,
+    services.length ? Math.ceil(Math.max(...services.map(s => s.price))) : 1000
+  ])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -25,18 +43,25 @@ const Services = () => {
   }, [services, searchQuery, sortBy, priceRange])
 
   const fetchServices = async () => {
-    setLoading(true)
+    setLoading(services.length === 0)
     setLoadError(false)
     try {
       const response = await api.get('/services')
       const items = response.data.services || []
       setServices(items)
+      setCatalogReady(true)
+      try {
+        localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ services: items, savedAt: Date.now() }))
+      } catch {
+        // Browsing still works when storage is unavailable.
+      }
       if (items.length > 0) {
         const maxPrice = Math.max(...items.map(s => s.price))
         setPriceRange([0, Math.ceil(maxPrice)])
       }
     } catch (error) {
       setLoadError(true)
+      setCatalogReady(false)
     } finally {
       setLoading(false)
     }
@@ -86,6 +111,7 @@ const Services = () => {
         <div className="page-header-compact">
           <h1>Our Services</h1>
         </div>
+        <p className="catalog-status" role="status">Connecting to the booking service. This may take a moment.</p>
         <CardSkeleton count={6} />
       </div>
     )
@@ -152,7 +178,14 @@ const Services = () => {
         </div>
       </div>
 
-      {loadError ? (
+      {!catalogReady && services.length > 0 && (
+        <div className="catalog-status" role="status">
+          <span>{loadError ? 'Could not refresh services. Showing the last available catalog.' : 'Refreshing services and booking availability…'}</span>
+          {loadError && <button onClick={fetchServices} className="btn btn-secondary">Try Again</button>}
+        </div>
+      )}
+
+      {loadError && services.length === 0 ? (
         <div className="empty-state" role="alert">
           <h3>Services could not be loaded</h3>
           <p>Please try again in a moment.</p>
@@ -250,8 +283,9 @@ const Services = () => {
                     <button
                       onClick={() => handleBook(service.id)}
                       className="btn btn-primary service-book-btn"
+                      disabled={!catalogReady}
                     >
-                      {service.price === 0 ? 'Book Free Consultation' : 'Book Now →'}
+                      {!catalogReady ? 'Checking availability…' : service.price === 0 ? 'Book Free Consultation' : 'Book Now →'}
                     </button>
                   </div>
                 </div>
